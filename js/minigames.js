@@ -16,8 +16,8 @@ function mgResultText(container, text, cls) {
 // ---------- Timing bar ----------
 
 function playTiming(container, tier, onDone) {
-  const zoneWidth = [30, 24, 18, 14][tier];
-  const loopMs = [1400, 1150, 950, 800][tier];
+  const zoneWidth = [30, 24, 18, 14, 11, 9][tier];
+  const loopMs = [1400, 1150, 950, 800, 700, 600][tier];
   const zoneLeft = 50 - zoneWidth / 2;
 
   container.innerHTML = `
@@ -29,6 +29,7 @@ function playTiming(container, tier, onDone) {
   `;
 
   const marker = container.querySelector("#mg-marker");
+  marker.style.left = "0%";
   const startTime = performance.now();
   let raf = null;
   let done = false;
@@ -69,6 +70,8 @@ function playReflex(container, tier, onDone) {
     [350, 600, 900],
     [300, 500, 750],
     [250, 420, 650],
+    [220, 380, 580],
+    [200, 340, 520],
   ][tier];
 
   container.innerHTML = `<div class="mg-reflex-box" id="mg-box">WAIT...</div>`;
@@ -116,7 +119,7 @@ function playReflex(container, tier, onDone) {
 // ---------- Pattern memory ----------
 
 function playPattern(container, tier, onDone) {
-  const seqLen = [3, 4, 5, 6][tier];
+  const seqLen = [3, 4, 5, 6, 7, 8][tier];
   const colors = ["red", "purple", "teal", "gold"];
   const sequence = Array.from({ length: seqLen }, () => Math.floor(Math.random() * 4));
 
@@ -177,9 +180,9 @@ function playPattern(container, tier, onDone) {
 // ---------- Multi-target takedown ----------
 
 function playTakedown(container, tier, onDone) {
-  const total = [5, 6, 7, 8][tier];
-  const visibleMs = [900, 780, 650, 550][tier];
-  const gapMs = [350, 300, 260, 220][tier];
+  const total = [5, 6, 7, 8, 9, 10][tier];
+  const visibleMs = [900, 780, 650, 550, 480, 420][tier];
+  const gapMs = [350, 300, 260, 220, 190, 170][tier];
 
   container.innerHTML = `
     <div class="mg-takedown-field" id="mg-field"></div>
