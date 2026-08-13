@@ -17,32 +17,32 @@ function tierForRep(rep) {
 
 const CONTRACTS = [
   // Tier 0 - Street Hitter
-  { id: "c1", name: "Debt Collector", tier: 0, payout: 400, rep: 3, duration: 8, baseChance: 0.85, heat: 3,
+  { id: "c1", name: "Debt Collector", tier: 0, payout: 400, rep: 3, duration: 4, baseChance: 0.85, heat: 3,
     minigame: "timing", mgTitle: "Shake Them Down", mgFlavor: "Time your move for when they're about to crack." },
-  { id: "c2", name: "Rival Dealer", tier: 0, payout: 800, rep: 6, duration: 14, baseChance: 0.75, heat: 6,
+  { id: "c2", name: "Rival Dealer", tier: 0, payout: 800, rep: 6, duration: 7, baseChance: 0.75, heat: 6,
     minigame: "reflex", mgTitle: "Ambush", mgFlavor: "Wait for your opening. Don't move too soon." },
-  { id: "c3", name: "Loudmouth Snitch", tier: 0, payout: 1500, rep: 9, duration: 20, baseChance: 0.65, heat: 9,
+  { id: "c3", name: "Loudmouth Snitch", tier: 0, payout: 1500, rep: 9, duration: 10, baseChance: 0.65, heat: 9,
     minigame: "takedown", mgTitle: "Silence Them", mgFlavor: "Shut down every witness before they talk." },
   // Tier 1 - Fixer
-  { id: "c4", name: "Crooked Cop", tier: 1, payout: 3500, rep: 20, duration: 30, baseChance: 0.6, heat: 14,
+  { id: "c4", name: "Crooked Cop", tier: 1, payout: 3500, rep: 20, duration: 15, baseChance: 0.6, heat: 14,
     minigame: "timing", mgTitle: "The Payoff", mgFlavor: "Slide the bribe at exactly the right moment." },
-  { id: "c5", name: "Business Rival", tier: 1, payout: 6000, rep: 28, duration: 40, baseChance: 0.55, heat: 18,
+  { id: "c5", name: "Business Rival", tier: 1, payout: 6000, rep: 28, duration: 20, baseChance: 0.55, heat: 18,
     minigame: "pattern", mgTitle: "Crack the Safe", mgFlavor: "Match the combination before security notices." },
-  { id: "c6", name: "Gang Lieutenant", tier: 1, payout: 10000, rep: 40, duration: 55, baseChance: 0.5, heat: 22,
+  { id: "c6", name: "Gang Lieutenant", tier: 1, payout: 10000, rep: 40, duration: 28, baseChance: 0.5, heat: 22,
     minigame: "takedown", mgTitle: "Clear the Crew", mgFlavor: "Drop his men before they reach for their guns." },
   // Tier 2 - Ghost
-  { id: "c7", name: "Cartel Boss", tier: 2, payout: 25000, rep: 80, duration: 75, baseChance: 0.45, heat: 28,
+  { id: "c7", name: "Cartel Boss", tier: 2, payout: 25000, rep: 80, duration: 38, baseChance: 0.45, heat: 28,
     minigame: "pattern", mgTitle: "Bypass Security", mgFlavor: "Mirror the compound's access code." },
-  { id: "c8", name: "Corrupt Judge", tier: 2, payout: 40000, rep: 107, duration: 90, baseChance: 0.4, heat: 32,
+  { id: "c8", name: "Corrupt Judge", tier: 2, payout: 40000, rep: 107, duration: 45, baseChance: 0.4, heat: 32,
     minigame: "timing", mgTitle: "The Drop", mgFlavor: "Hand off the evidence at the perfect moment." },
-  { id: "c9", name: "Federal Informant", tier: 2, payout: 65000, rep: 147, duration: 110, baseChance: 0.35, heat: 38,
+  { id: "c9", name: "Federal Informant", tier: 2, payout: 65000, rep: 147, duration: 55, baseChance: 0.35, heat: 38,
     minigame: "reflex", mgTitle: "Cut the Line", mgFlavor: "Catch him before he dials for backup." },
   // Tier 3 - Legend
-  { id: "c10", name: "Crime Family Head", tier: 3, payout: 150000, rep: 333, duration: 150, baseChance: 0.35, heat: 45,
+  { id: "c10", name: "Crime Family Head", tier: 3, payout: 150000, rep: 333, duration: 75, baseChance: 0.35, heat: 45,
     minigame: "reflex", mgTitle: "One Shot", mgFlavor: "You won't get a second chance. Time it perfectly." },
-  { id: "c11", name: "Foreign Diplomat", tier: 3, payout: 300000, rep: 500, duration: 180, baseChance: 0.3, heat: 50,
+  { id: "c11", name: "Foreign Diplomat", tier: 3, payout: 300000, rep: 500, duration: 90, baseChance: 0.3, heat: 50,
     minigame: "pattern", mgTitle: "Vault Access", mgFlavor: "Replicate the embassy's security sequence." },
-  { id: "c12", name: "The Kingpin", tier: 3, payout: 600000, rep: 800, duration: 240, baseChance: 0.28, heat: 55,
+  { id: "c12", name: "The Kingpin", tier: 3, payout: 600000, rep: 800, duration: 120, baseChance: 0.28, heat: 55,
     minigame: "takedown", mgTitle: "Final Stand", mgFlavor: "Drop every last guard between you and him." },
 ];
 
@@ -88,7 +88,7 @@ const FLEX_ITEMS = {
 };
 
 const SELL_RATE = 0.5; // fraction of original cost refunded when selling
-const BILL_CYCLE_SECONDS = 60; // how often rent/property tax comes due
+const BILL_CYCLE_SECONDS = 86400; // how often rent/property tax comes due (24h) — can also be paid early
 
 const HOUSES = {
   rent: [

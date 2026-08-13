@@ -366,10 +366,7 @@ function moveOut() {
   render();
 }
 
-function processBilling() {
-  if (!state.housingType) return;
-  if (!state.nextBillAt || Date.now() < state.nextBillAt) return;
-
+function payHouseBill() {
   const house = currentHouse();
   if (!house) {
     state.housingType = null;
@@ -398,6 +395,19 @@ function processBilling() {
   }
 
   state.nextBillAt = Date.now() + BILL_CYCLE_SECONDS * 1000;
+}
+
+function processBilling() {
+  if (!state.housingType) return;
+  if (!state.nextBillAt || Date.now() < state.nextBillAt) return;
+  payHouseBill();
+}
+
+function payBillEarly() {
+  if (!state.housingType) return;
+  payHouseBill();
+  save();
+  render();
 }
 
 // ---------- Crypto ----------

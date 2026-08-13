@@ -365,6 +365,16 @@ function slotsHTML() {
     </div>`;
 }
 
+function formatDuration(totalSeconds) {
+  totalSeconds = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 function housingTabHTML() {
   const house = currentHouse();
   let currentHTML = "";
@@ -372,17 +382,20 @@ function housingTabHTML() {
   if (house) {
     const due = state.housingType === "rent" ? house.rentCost : house.taxCost;
     const label = state.housingType === "rent" ? "Rent" : "Property tax";
-    const remain = state.nextBillAt ? Math.max(0, Math.ceil((state.nextBillAt - Date.now()) / 1000)) : 0;
+    const remain = state.nextBillAt ? Math.max(0, state.nextBillAt - Date.now()) / 1000 : 0;
     currentHTML = `
       <div class="active-contract">
         <div class="active-title">Current residence: ${house.name} (${state.housingType === "rent" ? "renting" : "owned"})</div>
-        <div class="card-row">${label} due in ${remain}s — ${fmt(due)}</div>
+        <div class="card-row">${label} due in ${formatDuration(remain)} — ${fmt(due)}</div>
         <div class="card-row">-${Math.round(house.heatReduction * 100)}% heat gain</div>
-        ${
-          state.housingType === "own"
-            ? `<button class="btn sell" data-action="sell-house">Sell house — ${fmt(Math.round(house.cost * SELL_RATE))}</button>`
-            : `<button class="btn sell" data-action="move-out">Move out</button>`
-        }
+        <div class="crypto-action-group">
+          <button class="btn" data-action="pay-bill-early" ${state.cash < due ? "disabled" : ""}>Pay ${label} Now — ${fmt(due)}</button>
+          ${
+            state.housingType === "own"
+              ? `<button class="btn sell" data-action="sell-house">Sell house — ${fmt(Math.round(house.cost * SELL_RATE))}</button>`
+              : `<button class="btn sell" data-action="move-out">Move out</button>`
+          }
+        </div>
       </div>`;
   } else {
     currentHTML = `<div class="active-contract">No residence — heat decays slower once you have a place to lay low.</div>`;
@@ -616,6 +629,7 @@ function bindTabEvents() {
         const input = document.getElementById("save-code-input");
         importSaveCode(input.value);
       }
+      else if (action === "pay-bill-early") payBillEarly();
       else if (action === "rent-house") rentHouse(id);
       else if (action === "buy-house") buyHouse(id);
       else if (action === "sell-house") sellHouse();
