@@ -114,6 +114,43 @@ const ITEM_ART = {
     <circle cx="160" cy="148" r="17" fill="#101014" stroke="var(--neon-gold)" stroke-width="1.5"/>
   `,
 
+  car6: `
+    <path d="M15,145 L15,120 Q18,105 35,102 L60,85 L110,85 L110,105 L185,105 L185,145 Z" fill="#3a4a3a" stroke="var(--neon-teal)" stroke-width="1.5" filter="url(#neonGlow)"/>
+    <polygon points="65,87 105,87 105,103 72,103" fill="#1a1a1a"/>
+    <line x1="112" y1="107" x2="182" y2="107" stroke="#1a2a1a" stroke-width="1"/>
+    <circle cx="55" cy="148" r="17" fill="#101014" stroke="#888" stroke-width="2"/>
+    <circle cx="160" cy="148" r="17" fill="#101014" stroke="#888" stroke-width="2"/>
+    <circle cx="55" cy="148" r="6.5" fill="#3a3a44"/>
+    <circle cx="160" cy="148" r="6.5" fill="#3a3a44"/>
+  `,
+
+  car7: `
+    <path d="M12,142 L16,124 Q30,106 55,103 L78,88 L128,88 L152,104 Q176,107 188,124 L188,142 Z" fill="#12182c" stroke="var(--neon-purple)" stroke-width="1.5" filter="url(#neonGlow)"/>
+    <polygon points="82,90 126,90 121,104 88,104" fill="#2a2a3a"/>
+    <circle cx="54" cy="145" r="17" fill="#101014" stroke="#aaa" stroke-width="2"/>
+    <circle cx="152" cy="145" r="17" fill="#101014" stroke="#aaa" stroke-width="2"/>
+    <circle cx="54" cy="145" r="6.5" fill="#2a2a3a"/>
+    <circle cx="152" cy="145" r="6.5" fill="#2a2a3a"/>
+  `,
+
+  car8: `
+    <path d="M12,146 L18,126 Q45,100 85,96 L115,82 L155,90 Q180,98 190,126 L190,146 Z" fill="#a3220f" stroke="var(--neon-red)" stroke-width="2" filter="url(#neonGlow)"/>
+    <polygon points="100,85 148,92 141,110 107,107" fill="#1a0805"/>
+    <path d="M155,90 L172,80" stroke="var(--neon-gold)" stroke-width="2"/>
+    <circle cx="54" cy="149" r="16" fill="#0a0a0e" stroke="var(--neon-gold)" stroke-width="1.5"/>
+    <circle cx="162" cy="149" r="16" fill="#0a0a0e" stroke="var(--neon-gold)" stroke-width="1.5"/>
+  `,
+
+  car9: `
+    <path d="M8,148 L12,128 Q52,102 95,98 L165,90 Q186,96 192,126 L192,148 Z" fill="#151515" stroke="var(--neon-teal)" stroke-width="2" filter="url(#neonGlow)"/>
+    <polygon points="100,96 140,90 134,112 106,112" fill="#0a1a1a"/>
+    <rect x="150" y="72" width="38" height="6" fill="#0a0a0a" stroke="var(--neon-teal)" stroke-width="1.5"/>
+    <line x1="160" y1="78" x2="160" y2="92" stroke="var(--neon-teal)" stroke-width="2"/>
+    <line x1="178" y1="78" x2="178" y2="92" stroke="var(--neon-teal)" stroke-width="2"/>
+    <circle cx="50" cy="150" r="16" fill="#050505" stroke="var(--neon-teal)" stroke-width="1.5"/>
+    <circle cx="166" cy="150" r="16" fill="#050505" stroke="var(--neon-teal)" stroke-width="1.5"/>
+  `,
+
   // ---------- WATCHES ----------
   watch1: `
     <rect x="85" y="8" width="30" height="46" rx="6" fill="#2a2a34"/>
@@ -171,6 +208,53 @@ const ITEM_ART = {
     <line x1="100" y1="100" x2="114" y2="112" stroke="var(--neon-teal)" stroke-width="1.5"/>
   `,
 
+  watch6: `
+    <rect x="86" y="10" width="28" height="44" rx="6" fill="#2a2a34"/>
+    <rect x="86" y="136" width="28" height="54" rx="6" fill="#2a2a34"/>
+    <circle cx="100" cy="100" r="46" fill="#1e1e26" stroke="var(--neon-teal)" stroke-width="2" filter="url(#neonGlow)"/>
+    <circle cx="100" cy="100" r="37" fill="#0e0e14"/>
+    <circle cx="85" cy="100" r="9" fill="none" stroke="#888" stroke-width="1.2"/>
+    <circle cx="115" cy="100" r="9" fill="none" stroke="#888" stroke-width="1.2"/>
+    <line x1="100" y1="100" x2="100" y2="78" stroke="#e8e8f0" stroke-width="2"/>
+    <line x1="100" y1="100" x2="116" y2="112" stroke="#e8e8f0" stroke-width="2"/>
+  `,
+
+  watch7: `
+    <rect x="85" y="10" width="30" height="42" rx="6" fill="#1a1a1a"/>
+    <rect x="85" y="138" width="30" height="52" rx="6" fill="#1a1a1a"/>
+    <circle cx="100" cy="100" r="47" fill="#0a0a0a" stroke="#999" stroke-width="3" filter="url(#neonGlow)"/>
+    <circle cx="100" cy="100" r="37" fill="#050505"/>
+    <g stroke="#ccc" stroke-width="1.5">
+      <line x1="100" y1="58" x2="100" y2="65"/><line x1="100" y1="135" x2="100" y2="142"/>
+      <line x1="58" y1="100" x2="65" y2="100"/><line x1="135" y1="100" x2="142" y2="100"/>
+    </g>
+    <line x1="100" y1="100" x2="100" y2="80" stroke="var(--neon-teal)" stroke-width="2"/>
+    <line x1="100" y1="100" x2="114" y2="110" stroke="var(--neon-teal)" stroke-width="2"/>
+  `,
+
+  watch8: `
+    <rect x="84" y="10" width="32" height="42" rx="6" fill="#3a3a3a"/>
+    <rect x="84" y="138" width="32" height="52" rx="6" fill="#3a3a3a"/>
+    <polygon points="100,52 130,64 142,94 142,106 130,136 100,148 70,136 58,106 58,94 70,64" fill="#4a4a4a" stroke="var(--neon-gold)" stroke-width="2" filter="url(#neonGlow)"/>
+    <circle cx="100" cy="100" r="34" fill="#1a1a1a"/>
+    <line x1="100" y1="100" x2="100" y2="80" stroke="var(--neon-gold)" stroke-width="2"/>
+    <line x1="100" y1="100" x2="112" y2="110" stroke="var(--neon-gold)" stroke-width="2"/>
+  `,
+
+  watch9: `
+    <rect x="85" y="12" width="30" height="40" rx="6" fill="#1a2a3a"/>
+    <rect x="85" y="138" width="30" height="50" rx="6" fill="#1a2a3a"/>
+    <circle cx="100" cy="100" r="46" fill="#26466b" stroke="var(--neon-gold)" stroke-width="2" filter="url(#neonGlow)"/>
+    <circle cx="70" cy="82" r="5" fill="none" stroke="var(--neon-gold)" stroke-width="2"/>
+    <circle cx="130" cy="118" r="5" fill="none" stroke="var(--neon-gold)" stroke-width="2"/>
+    <circle cx="100" cy="100" r="36" fill="#1a3552"/>
+    <g stroke="#2a4a6b" stroke-width="1.5">
+      <line x1="68" y1="88" x2="132" y2="88"/><line x1="66" y1="100" x2="134" y2="100"/><line x1="68" y1="112" x2="132" y2="112"/>
+    </g>
+    <line x1="100" y1="100" x2="100" y2="82" stroke="#fff" stroke-width="2"/>
+    <line x1="100" y1="100" x2="113" y2="109" stroke="#fff" stroke-width="2"/>
+  `,
+
   // ---------- NECKLACES ----------
   neck1: `
     <path d="M40,28 Q60,110 100,148" fill="none" stroke="#c4c4cc" stroke-width="6" stroke-linecap="round" stroke-dasharray="8 4"/>
@@ -207,6 +291,34 @@ const ITEM_ART = {
     </g>
     <polygon points="100,142 122,162 100,192 78,162" fill="#dff7f5" stroke="var(--neon-teal)" stroke-width="2.5" filter="url(#neonGlow)"/>
     <polygon points="100,150 111,163 100,178 89,163" fill="#fff" opacity="0.6"/>
+  `,
+
+  neck6: `
+    <g fill="#f0ead6">
+      <circle cx="42" cy="32" r="6"/><circle cx="50" cy="52" r="6.5"/><circle cx="60" cy="72" r="7"/>
+      <circle cx="73" cy="92" r="7.5"/><circle cx="88" cy="112" r="8"/><circle cx="100" cy="128" r="8"/>
+      <circle cx="112" cy="112" r="8"/><circle cx="127" cy="92" r="7.5"/><circle cx="140" cy="72" r="7"/>
+      <circle cx="150" cy="52" r="6.5"/><circle cx="158" cy="32" r="6"/>
+    </g>
+  `,
+
+  neck7: `
+    <path d="M38,26 Q60,112 100,150" fill="none" stroke="#e8e8f0" stroke-width="8" stroke-linecap="round" filter="url(#neonGlow)"/>
+    <path d="M162,26 Q140,112 100,150" fill="none" stroke="#e8e8f0" stroke-width="8" stroke-linecap="round" filter="url(#neonGlow)"/>
+    <g fill="var(--neon-teal)">
+      <circle cx="44" cy="45" r="2.5"/><circle cx="58" cy="78" r="2.5"/><circle cx="76" cy="112" r="2.5"/>
+      <circle cx="156" cy="45" r="2.5"/><circle cx="142" cy="78" r="2.5"/><circle cx="124" cy="112" r="2.5"/>
+    </g>
+  `,
+
+  neck8: `
+    <path d="M34,24 Q58,112 100,150" fill="none" stroke="#dfe6ea" stroke-width="12" stroke-linecap="round" filter="url(#neonGlow)"/>
+    <path d="M166,24 Q142,112 100,150" fill="none" stroke="#dfe6ea" stroke-width="12" stroke-linecap="round" filter="url(#neonGlow)"/>
+    <g fill="#fff">
+      <circle cx="45" cy="45" r="2.5"/><circle cx="62" cy="80" r="2.5"/><circle cx="80" cy="115" r="2.5"/>
+      <circle cx="155" cy="45" r="2.5"/><circle cx="138" cy="80" r="2.5"/><circle cx="120" cy="115" r="2.5"/>
+    </g>
+    <polygon points="100,145 108,155 100,168 92,155" fill="var(--neon-teal)" opacity="0.8"/>
   `,
 
   // ---------- CLOTHES ----------
@@ -279,6 +391,19 @@ const ITEM_ART = {
     </g>
   `,
 
+  rent4: `
+    <rect x="55" y="10" width="90" height="170" fill="#141018" stroke="var(--neon-gold)" stroke-width="2" filter="url(#neonGlow)"/>
+    <g fill="#0c0c10" stroke="var(--neon-gold)" stroke-width="1">
+      <rect x="65" y="22" width="16" height="16"/><rect x="87" y="22" width="16" height="16"/><rect x="109" y="22" width="16" height="16"/>
+      <rect x="65" y="44" width="16" height="16"/><rect x="87" y="44" width="16" height="16"/><rect x="109" y="44" width="16" height="16"/>
+      <rect x="65" y="66" width="16" height="16"/><rect x="87" y="66" width="16" height="16"/><rect x="109" y="66" width="16" height="16"/>
+      <rect x="65" y="88" width="16" height="16"/><rect x="87" y="88" width="16" height="16"/><rect x="109" y="88" width="16" height="16"/>
+      <rect x="65" y="110" width="16" height="16"/><rect x="87" y="110" width="16" height="16"/><rect x="109" y="110" width="16" height="16"/>
+      <rect x="65" y="132" width="16" height="16"/><rect x="87" y="132" width="16" height="16"/><rect x="109" y="132" width="16" height="16"/>
+    </g>
+    <rect x="90" y="155" width="20" height="25" fill="#0c0c10" stroke="var(--neon-gold)" stroke-width="1"/>
+  `,
+
   buy1: `
     <polygon points="100,45 40,95 160,95" fill="#2a1a10" stroke="var(--neon-gold)" stroke-width="2" filter="url(#neonGlow)"/>
     <rect x="50" y="95" width="100" height="80" fill="#1c1c24" stroke="var(--neon-gold)" stroke-width="2"/>
@@ -317,6 +442,70 @@ const ITEM_ART = {
     <path d="M22,178 Q26,120 34,100 Q38,120 30,178 Z" fill="#0f3d2e" stroke="var(--neon-teal)" stroke-width="1"/>
     <path d="M178,178 Q174,120 166,100 Q162,120 170,178 Z" fill="#0f3d2e" stroke="var(--neon-teal)" stroke-width="1"/>
   `,
+
+  // ---------- ARMS TRAFFICKING ----------
+  pistol: pistolGroup("#2a2a30", "var(--neon-red)"),
+
+  revolver: `
+    <rect x="115" y="94" width="55" height="12" rx="2" fill="#2a2a30" stroke="var(--neon-gold)" stroke-width="1.5" filter="url(#neonGlow)"/>
+    <circle cx="100" cy="100" r="22" fill="#2a2a30" stroke="var(--neon-gold)" stroke-width="2" filter="url(#neonGlow)"/>
+    <circle cx="100" cy="88" r="4" fill="#14141a"/><circle cx="112" cy="96" r="4" fill="#14141a"/>
+    <circle cx="108" cy="111" r="4" fill="#14141a"/><circle cx="92" cy="111" r="4" fill="#14141a"/>
+    <circle cx="88" cy="96" r="4" fill="#14141a"/>
+    <polygon points="82,112 100,112 94,165 72,150" fill="#2a2a30" stroke="var(--neon-gold)" stroke-width="1.5"/>
+    <path d="M88,112 q-8,15 0,25" fill="none" stroke="var(--neon-gold)" stroke-width="2"/>
+  `,
+
+  shotgun: `
+    <polygon points="18,96 55,92 55,112 22,116" fill="#1c1c22" stroke="var(--neon-purple)" stroke-width="1.5"/>
+    <rect x="52" y="86" width="46" height="26" rx="4" fill="#1c1c22" stroke="var(--neon-purple)" stroke-width="2" filter="url(#neonGlow)"/>
+    <rect x="90" y="95" width="94" height="10" rx="2" fill="#1c1c22" stroke="var(--neon-purple)" stroke-width="1.5" filter="url(#neonGlow)"/>
+    <rect x="112" y="91" width="32" height="17" rx="3" fill="#0f0f14" stroke="var(--neon-purple)" stroke-width="1.5"/>
+    <polygon points="60,112 76,112 71,150 58,140" fill="#1c1c22" stroke="var(--neon-purple)" stroke-width="1.5"/>
+  `,
+
+  buy5: `
+    <rect x="45" y="60" width="110" height="120" fill="#1a1a22" stroke="var(--neon-teal)" stroke-width="2" filter="url(#neonGlow)"/>
+    <g fill="#0c0c10" stroke="var(--neon-teal)" stroke-width="1">
+      <rect x="55" y="75" width="24" height="20"/><rect x="88" y="75" width="24" height="20"/><rect x="121" y="75" width="24" height="20"/>
+      <rect x="55" y="105" width="24" height="20"/><rect x="88" y="105" width="24" height="20"/><rect x="121" y="105" width="24" height="20"/>
+      <rect x="55" y="135" width="24" height="20"/><rect x="88" y="135" width="24" height="20"/><rect x="121" y="135" width="24" height="20"/>
+    </g>
+    <line x1="45" y1="97" x2="155" y2="97" stroke="var(--neon-teal)" stroke-width="1" opacity="0.5"/>
+    <line x1="45" y1="127" x2="155" y2="127" stroke="var(--neon-teal)" stroke-width="1" opacity="0.5"/>
+  `,
+
+  buy6: `
+    <rect x="30" y="110" width="140" height="65" fill="#16181a" stroke="var(--neon-teal)" stroke-width="2" filter="url(#neonGlow)"/>
+    <polygon points="30,110 60,85 150,85 170,110" fill="#1c2224" stroke="var(--neon-teal)" stroke-width="1.5"/>
+    <rect x="45" y="125" width="22" height="22" fill="#0c0c10" stroke="var(--neon-teal)" stroke-width="1"/>
+    <rect x="90" y="125" width="22" height="22" fill="#0c0c10" stroke="var(--neon-teal)" stroke-width="1"/>
+    <rect x="133" y="125" width="22" height="22" fill="#0c0c10" stroke="var(--neon-teal)" stroke-width="1"/>
+    <ellipse cx="100" cy="185" rx="60" ry="8" fill="#0a3d5c" stroke="var(--neon-teal)" stroke-width="1" opacity="0.7"/>
+  `,
+
+  buy7: `
+    <rect x="20" y="95" width="160" height="80" fill="#1c1810" stroke="var(--neon-gold)" stroke-width="2" filter="url(#neonGlow)"/>
+    <polygon points="100,55 20,95 180,95" fill="#2a2010" stroke="var(--neon-gold)" stroke-width="2"/>
+    <g fill="none" stroke="var(--neon-gold)" stroke-width="2">
+      <line x1="40" y1="100" x2="40" y2="175"/><line x1="65" y1="100" x2="65" y2="175"/>
+      <line x1="135" y1="100" x2="135" y2="175"/><line x1="160" y1="100" x2="160" y2="175"/>
+    </g>
+    <rect x="88" y="130" width="24" height="45" fill="#0c0c10" stroke="var(--neon-gold)" stroke-width="1"/>
+    <circle cx="100" cy="185" r="8" fill="none" stroke="var(--neon-teal)" stroke-width="1.5"/>
+  `,
+
+  buy8: `
+    <rect x="60" y="5" width="80" height="175" fill="#0e0e14" stroke="var(--neon-purple)" stroke-width="2" filter="url(#neonGlow)"/>
+    <g fill="#1a1a26" stroke="var(--neon-purple)" stroke-width="0.8">
+      <rect x="68" y="18" width="14" height="14"/><rect x="86" y="18" width="14" height="14"/><rect x="104" y="18" width="14" height="14"/><rect x="122" y="18" width="14" height="14"/>
+      <rect x="68" y="38" width="14" height="14"/><rect x="86" y="38" width="14" height="14"/><rect x="104" y="38" width="14" height="14"/><rect x="122" y="38" width="14" height="14"/>
+      <rect x="68" y="58" width="14" height="14"/><rect x="86" y="58" width="14" height="14"/><rect x="104" y="58" width="14" height="14"/><rect x="122" y="58" width="14" height="14"/>
+    </g>
+    <rect x="60" y="80" width="80" height="30" fill="#1c1c2a" stroke="var(--neon-teal)" stroke-width="1.5"/>
+    <line x1="70" y1="95" x2="130" y2="95" stroke="var(--neon-teal)" stroke-width="1"/>
+    <rect x="70" y="115" width="60" height="65" fill="#151520" stroke="var(--neon-purple)" stroke-width="1"/>
+  `,
 };
 
 const ITEM_PHOTO = {
@@ -343,7 +532,6 @@ const ITEM_PHOTO = {
   neck5: "assets/items/neck5.jpg",
   cloth1: "assets/items/cloth1.jpg",
   cloth2: "assets/items/cloth2.jpg",
-  cloth3: "assets/items/cloth3.webp",
   cloth4: "assets/items/cloth4.avif",
   cloth5: "assets/items/cloth5.avif",
   rent1: "assets/items/rent1.jpg",
@@ -353,6 +541,17 @@ const ITEM_PHOTO = {
   buy2: "assets/items/buy2.jpg",
   buy3: "assets/items/buy3.jpeg",
   buy4: "assets/items/buy4.avif",
+  buy5: "assets/items/buy5.jpg",
+  buy6: "assets/items/buy6.jpg",
+  buy7: "assets/items/buy7.jpg",
+  buy8: "assets/items/buy8.jpg",
+  car8: "assets/items/car8.jpg",
+  car9: "assets/items/car9.avif",
+  watch6: "assets/items/watch6.jpg",
+  cloth3: "assets/items/cloth3.avif",
+  rifle: "assets/items/rifle.webp",
+  smg: "assets/items/smg.webp",
+  sniper: "assets/items/sniper.webp",
 };
 
 function itemArtSVG(id, size = 64) {

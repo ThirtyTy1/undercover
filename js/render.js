@@ -873,6 +873,7 @@ function renderArmsDealerPanel() {
     const owned = state.armsInventory[g.id] || 0;
     return `
       <div class="plug-row">
+        <div class="art-box">${itemArtSVG(g.id, 56)}</div>
         <div class="plug-row-title">${g.name} <span class="plug-row-stock">${owned} on hand</span></div>
         <div class="card-row">${fmt(g.buyPrice)} each</div>
         <div class="crypto-action-group">
@@ -906,6 +907,7 @@ function renderGunOrdersView() {
       ).join("");
       return `
         <div class="plug-row">
+          <div class="art-box">${itemArtSVG(g.id, 56)}</div>
           <div class="plug-row-title">Wants ${order.qty} ${g.name}${order.qty > 1 ? "s" : ""}</div>
           <div class="card-row">Offering ${fmt(order.offerPrice)} · expires in ${remain}s</div>
           ${!haveEnough ? `<div class="locked-tag">Not enough ${g.name} in stock</div>` : ""}
