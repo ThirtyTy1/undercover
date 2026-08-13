@@ -37,6 +37,7 @@ function render() {
   if (phoneOpenContact === "__requests__") renderDrugRequestsView();
   if (phoneOpenContact === "__gunorders__") renderGunOrdersView();
   if (phoneOpenContact === "__watchorders__") renderWatchOrdersView();
+  if (phoneOpenContact === "__home__") renderPhoneHome();
 }
 
 function renderStats() {
@@ -907,7 +908,60 @@ function togglePhone() {
   const panel = document.getElementById("phone-panel");
   const opening = panel.classList.contains("hidden");
   panel.classList.toggle("hidden");
-  if (opening) renderPhoneContacts();
+  if (opening) renderPhoneHome();
+}
+
+const HOME_APPS = [
+  { icon: "📞", label: "Contacts", bg: "linear-gradient(160deg,#3ddc73,#1a8f45)" },
+  { icon: "💬", label: "Messages", bg: "linear-gradient(160deg,#3ddc73,#1a8f45)" },
+  { icon: "📷", label: "Evidence", bg: "linear-gradient(160deg,#5a5a5a,#181818)" },
+  { icon: "🗒️", label: "Case Notes", bg: "linear-gradient(160deg,#ffd166,#c98f1a)" },
+  { icon: "🕐", label: "Countdown", bg: "linear-gradient(160deg,#2e2e2e,#000)" },
+  { icon: "⚙️", label: "Settings", bg: "linear-gradient(160deg,#9a9aa0,#4a4a50)" },
+  { icon: "🗺️", label: "Routes", bg: "linear-gradient(160deg,#5ecbf5,#1a7fae)" },
+  { icon: "💰", label: "Ledger", bg: "linear-gradient(160deg,#c14dff,#5a0aa8)" },
+];
+const HOME_DOCK = [
+  { icon: "📞", bg: "linear-gradient(160deg,#3ddc73,#1a8f45)" },
+  { icon: "🧭", bg: "linear-gradient(160deg,#5ecbf5,#1a7fae)" },
+  { icon: "💬", bg: "linear-gradient(160deg,#3ddc73,#1a8f45)" },
+  { icon: "🎵", bg: "linear-gradient(160deg,#ff5e7a,#a8123a)" },
+];
+
+function renderPhoneHome() {
+  phoneOpenContact = "__home__";
+  document.getElementById("phone-title").textContent = "";
+  document.getElementById("phone-back").classList.add("hidden");
+
+  const tierIdx = currentTierIndex();
+  const tier = TIERS[tierIdx];
+  const appIcons = HOME_APPS.map(
+    (a) => `
+      <div class="home-app" data-action="open-contacts">
+        <div class="home-app-icon" style="background:${a.bg}">${a.icon}</div>
+        <div class="home-app-label">${a.label}</div>
+      </div>`
+  ).join("");
+  const dockIcons = HOME_DOCK.map((a) => `<div class="home-dock-icon" style="background:${a.bg}" data-action="open-contacts">${a.icon}</div>`).join("");
+
+  document.getElementById("phone-body").innerHTML = `
+    <div class="iphone-home">
+      <div class="home-widgets">
+        <div class="home-widget">
+          <div class="home-widget-label">🔥 Suspicion</div>
+          <div class="home-widget-value">${Math.round(state.heat)}%</div>
+          <div class="heat-bar home-widget-bar"><div class="heat-fill" style="width:${state.heat}%"></div></div>
+        </div>
+        <div class="home-widget">
+          <div class="home-widget-label">💰 Cash on Hand</div>
+          <div class="home-widget-value">${fmt(state.cash)}</div>
+          <div class="home-widget-sub">${tier.name}</div>
+        </div>
+      </div>
+      <div class="home-app-grid">${appIcons}</div>
+      <button class="home-search" data-action="open-contacts">🔍 Search</button>
+      <div class="home-dock">${dockIcons}</div>
+    </div>`;
 }
 
 function closePhone() {
@@ -917,7 +971,7 @@ function closePhone() {
 function renderPhoneContacts() {
   phoneOpenContact = null;
   document.getElementById("phone-title").textContent = "Contacts";
-  document.getElementById("phone-back").classList.add("hidden");
+  document.getElementById("phone-back").classList.remove("hidden");
 
   const pendingCount = state.drugRequests.length;
   const pendingGunOrders = state.gunOrders.length;
@@ -1167,7 +1221,11 @@ function renderPhoneThread(contactId) {
 
 document.getElementById("phone-toggle").addEventListener("click", togglePhone);
 document.getElementById("phone-close").addEventListener("click", closePhone);
-document.getElementById("phone-back").addEventListener("click", renderPhoneContacts);
+function phoneGoBack() {
+  if (phoneOpenContact === null) renderPhoneHome();
+  else renderPhoneContacts();
+}
+document.getElementById("phone-back").addEventListener("click", phoneGoBack);
 
 document.getElementById("phone-body").addEventListener("click", (e) => {
   const contactRow = e.target.closest("[data-contact]");
@@ -1189,6 +1247,7 @@ document.getElementById("phone-body").addEventListener("click", (e) => {
     else if (action === "accept-watch-order") acceptWatchOrder(actionBtn.dataset.id);
     else if (action === "counter-watch-order") counterWatchOrder(actionBtn.dataset.id, Number(actionBtn.dataset.pct), Number(actionBtn.dataset.chance));
     else if (action === "decline-watch-order") declineWatchOrder(actionBtn.dataset.id);
+    else if (action === "open-contacts") renderPhoneContacts();
   } else if (contactRow) {
     const id = contactRow.dataset.contact;
     if (id === "__plug__") renderPlugPanel();
