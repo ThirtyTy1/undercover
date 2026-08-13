@@ -72,6 +72,15 @@ function renderStats() {
 
 function renderTabContent() {
   const el = document.getElementById("tab-content");
+
+  // The game loop re-renders every second, which would otherwise wipe out
+  // whatever the player is mid-typing into a field inside this tab.
+  const active = document.activeElement;
+  const preserve =
+    active && el.contains(active) && active.id
+      ? { id: active.id, value: active.value, selStart: active.selectionStart, selEnd: active.selectionEnd }
+      : null;
+
   if (activeTab === "contracts") el.innerHTML = contractsTabHTML();
   else if (activeTab === "arsenal") el.innerHTML = arsenalTabHTML();
   else if (activeTab === "flex") el.innerHTML = flexTabHTML();
@@ -83,6 +92,19 @@ function renderTabContent() {
   else if (activeTab === "laylow") el.innerHTML = laylowTabHTML();
   else if (activeTab === "profile") el.innerHTML = profileTabHTML();
   bindTabEvents();
+
+  if (preserve) {
+    const restored = document.getElementById(preserve.id);
+    if (restored) {
+      restored.value = preserve.value;
+      restored.focus();
+      if (typeof restored.setSelectionRange === "function" && restored.type !== "number") {
+        try {
+          restored.setSelectionRange(preserve.selStart, preserve.selEnd);
+        } catch (e) {}
+      }
+    }
+  }
 }
 
 function contractsTabHTML() {
@@ -194,6 +216,7 @@ function flexCategoryHTML(catName, items) {
 let flexView = "cars";
 const FLEX_CATEGORIES = [
   { key: "cars", label: "Cars", items: () => FLEX_ITEMS.cars },
+  { key: "jets", label: "Jets", items: () => FLEX_ITEMS.jets },
   { key: "watches", label: "Watches", items: () => FLEX_ITEMS.watches },
   { key: "necklaces", label: "Necklaces", items: () => FLEX_ITEMS.necklaces },
   { key: "clothes", label: "Clothes", items: () => FLEX_ITEMS.clothes },

@@ -506,6 +506,16 @@ const ITEM_ART = {
     <line x1="70" y1="95" x2="130" y2="95" stroke="var(--neon-teal)" stroke-width="1"/>
     <rect x="70" y="115" width="60" height="65" fill="#151520" stroke="var(--neon-purple)" stroke-width="1"/>
   `,
+
+  jet1: `
+    <path d="M18,102 L155,97 Q188,97 194,103 Q188,109 155,106 L18,108 Z" fill="#e9ebf0" stroke="var(--neon-teal)" stroke-width="1.5" filter="url(#neonGlow)"/>
+    <polygon points="155,97 194,103 155,106" fill="#c3c8d4"/>
+    <polygon points="68,107 36,66 63,100" fill="#cfd3dd" opacity="0.9"/>
+    <polygon points="68,109 36,150 63,111" fill="#cfd3dd" opacity="0.9"/>
+    <polygon points="22,103 6,86 26,102" fill="#aeb4c4"/>
+    <circle cx="12" cy="105" r="3" fill="var(--neon-gold)"/>
+    <line x1="30" y1="105" x2="180" y2="105" stroke="#9aa0b0" stroke-width="0.75" opacity="0.6"/>
+  `,
 };
 
 const ITEM_PHOTO = {
@@ -563,6 +573,10 @@ const ITEM_PHOTO = {
   cloth6: "assets/items/cloth6.avif",
   cloth7: "assets/items/cloth7.avif",
   buy9: "assets/items/buy9.jpg",
+  jet1: "assets/items/jet1.webp",
+  jet2: "assets/items/jet2.jpg",
+  jet3: "assets/items/jet3.jpeg",
+  jet4: "assets/items/jet4.webp",
   car6: "assets/items/car6.jpg",
   car7: "assets/items/car7.jpg",
   watch7: "assets/items/watch7.jpg",
