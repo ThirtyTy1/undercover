@@ -563,6 +563,14 @@ const ITEM_PHOTO = {
   cloth6: "assets/items/cloth6.avif",
   cloth7: "assets/items/cloth7.avif",
   buy9: "assets/items/buy9.jpg",
+  car6: "assets/items/car6.jpg",
+  car7: "assets/items/car7.jpg",
+  watch7: "assets/items/watch7.jpg",
+  watch8: "assets/items/watch8.webp",
+  watch9: "assets/items/watch9.jpg",
+  neck7: "assets/items/neck7.webp",
+  neck8: "assets/items/neck8.jpg",
+  rent4: "assets/items/rent4.webp",
 };
 
 function itemArtSVG(id, size = 64) {
