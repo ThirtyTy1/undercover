@@ -552,6 +552,16 @@ const ITEM_PHOTO = {
   rifle: "assets/items/rifle.webp",
   smg: "assets/items/smg.webp",
   sniper: "assets/items/sniper.webp",
+  car10: "assets/items/car10.webp",
+  car11: "assets/items/car11.webp",
+  car12: "assets/items/car12.webp",
+  watch10: "assets/items/watch10.png",
+  watch11: "assets/items/watch11.jpg",
+  watch12: "assets/items/watch12.jpg",
+  watch13: "assets/items/watch13.avif",
+  cloth6: "assets/items/cloth6.avif",
+  cloth7: "assets/items/cloth7.avif",
+  buy9: "assets/items/buy9.jpg",
 };
 
 function itemArtSVG(id, size = 64) {
