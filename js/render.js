@@ -69,6 +69,9 @@ function renderStats() {
       <span class="stat-label">${tier.name}</span>
       <div class="rep-bar"><div class="rep-fill" style="width:${repPct}%"></div></div>
     </div>
+    <div class="stat">
+      <span class="stat-label">📍 ${(CITIES.find((c) => c.id === state.currentCity) || CITIES[0]).name}</span>
+    </div>
   `;
 }
 
@@ -91,6 +94,7 @@ function renderTabContent() {
   else if (activeTab === "casino") el.innerHTML = casinoTabHTML();
   else if (activeTab === "businesses") el.innerHTML = businessesTabHTML();
   else if (activeTab === "housing") el.innerHTML = housingTabHTML();
+  else if (activeTab === "world") el.innerHTML = worldTabHTML();
   else if (activeTab === "laylow") el.innerHTML = laylowTabHTML();
   else if (activeTab === "profile") el.innerHTML = profileTabHTML();
   bindTabEvents();
@@ -136,7 +140,11 @@ function contractsTabHTML() {
       </div>`;
   }
 
-  const cards = CONTRACTS.map((c) => {
+  const city = CITIES.find((c) => c.id === state.currentCity) || CITIES[0];
+  const cityBanner = `<div class="card-row city-banner">📍 Currently in <strong>${city.name}</strong>${city.id !== "detroit" ? ` — <span class="hint" style="display:inline">${city.desc}</span>` : ""}</div>`;
+
+  const cityContracts = CONTRACTS.filter((c) => (c.city || "detroit") === state.currentCity);
+  const cards = cityContracts.map((c) => {
     const repReq = Math.max(TIERS[c.tier].repReq, c.unlockRep || 0);
     const locked = c.tier > tierIdx || state.rep < repReq;
     const disabled = locked || !!state.activeContract || burned;
@@ -158,7 +166,7 @@ function contractsTabHTML() {
       </div>`;
   }).join("");
 
-  return `${activeHTML}<div class="grid">${cards}</div>`;
+  return `${cityBanner}${activeHTML}<div class="grid">${cards}</div>`;
 }
 
 function arsenalTabHTML() {
@@ -780,6 +788,30 @@ function businessesTabHTML() {
   return `${status}<div class="grid">${cards}</div>`;
 }
 
+function worldTabHTML() {
+  const ownedJet = hasPrivateJet();
+  const cards = CITIES.map((c) => {
+    const here = state.currentCity === c.id;
+    const locked = c.requiresJet && !ownedJet;
+    const cantAfford = !here && !locked && state.cash < TRAVEL_COST;
+    return `
+      <div class="card ${locked ? "locked" : ""} ${here ? "owned" : ""}">
+        <div class="card-title">${c.name}</div>
+        <div class="card-row">${c.desc}</div>
+        ${c.requiresJet ? `<div class="card-row">Requires owning a private jet</div>` : ""}
+        ${
+          here
+            ? `<button class="btn equipped" disabled>Currently Here</button>`
+            : locked
+            ? `<div class="locked-tag">Own a private jet to fly here</div>`
+            : `<button class="btn" data-action="travel-city" data-id="${c.id}" ${cantAfford ? "disabled" : ""}>Fly Here — ${fmt(TRAVEL_COST)}</button>`
+        }
+      </div>`;
+  }).join("");
+
+  return `<div class="grid">${cards}</div>`;
+}
+
 function bindTabEvents() {
   document.querySelectorAll("[data-action]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -803,6 +835,7 @@ function bindTabEvents() {
       else if (action === "equip-agent") equipAgentGear(btn.dataset.id, btn.dataset.slot, btn.dataset.gear);
       else if (action === "buy-business") buyBusiness(id);
       else if (action === "sell-business") sellBusiness(id);
+      else if (action === "travel-city") travelToCity(id);
       else if (action === "export-save") exportSave();
       else if (action === "import-save-trigger") document.getElementById("import-save-input").click();
       else if (action === "show-save-code") showSaveCode();

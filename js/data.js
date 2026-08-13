@@ -25,6 +25,15 @@ function levelForRep(rep) {
   return Math.max(1, Math.min(MAX_LEVEL, Math.floor(rep / REP_PER_LEVEL) + 1));
 }
 
+// World / city system — Detroit is home base, free. Other cities need a private jet owned
+// (any FLEX_ITEMS.jets item) to fly to. Each city unlocks its own exclusive contracts.
+const CITIES = [
+  { id: "detroit", name: "Detroit", desc: "Home base. Where it all started.", requiresJet: false },
+  { id: "miami", name: "Miami", desc: "Luxury nightlife, yachts, and cartel money.", requiresJet: true },
+  { id: "tokyo", name: "Tokyo", desc: "A high-end underground market most crews never see.", requiresJet: true },
+];
+const TRAVEL_COST = 5000;
+
 const CONTRACTS = [
   // Tier 0 - Street Hitter
   { id: "c1", name: "Debt Collector", tier: 0, payout: 400, rep: 3, duration: 4, baseChance: 0.85, heat: 3,
@@ -60,6 +69,20 @@ const CONTRACTS = [
   // Tier 5 - Shadow Don
   { id: "c14", name: "Take the Crown", tier: 5, unlockRep: 3200, payout: 1100000, rep: 1200, duration: 130, baseChance: 0.22, heat: 68,
     minigame: "takedown", mgTitle: "Seize the Throne", mgFlavor: "Drop everyone standing between you and the top." },
+  // Miami exclusive — requires flying in on a private jet
+  { id: "c15", name: "Yacht Party Hit", city: "miami", tier: 3, payout: 500000, rep: 700, duration: 90, baseChance: 0.3, heat: 50,
+    minigame: "reflex", mgTitle: "Deck Ambush", mgFlavor: "Catch him alone between the bar and the stern." },
+  { id: "c16", name: "Nightclub Kingpin", city: "miami", tier: 4, payout: 900000, rep: 1000, duration: 110, baseChance: 0.26, heat: 62,
+    minigame: "pattern", mgTitle: "VIP Access", mgFlavor: "Match the doorman's code before the set ends." },
+  { id: "c17", name: "Cartel Meeting", city: "miami", tier: 5, payout: 1300000, rep: 1300, duration: 140, baseChance: 0.2, heat: 72,
+    minigame: "takedown", mgTitle: "The Sit-Down", mgFlavor: "Every man at the table is armed. Move first." },
+  // Tokyo exclusive — requires flying in on a private jet
+  { id: "c18", name: "Shibuya Shakedown", city: "tokyo", tier: 3, payout: 550000, rep: 720, duration: 95, baseChance: 0.29, heat: 52,
+    minigame: "timing", mgTitle: "Crossing Handoff", mgFlavor: "Slip the package across at the exact light change." },
+  { id: "c19", name: "Yakuza Lieutenant", city: "tokyo", tier: 4, payout: 950000, rep: 1050, duration: 115, baseChance: 0.25, heat: 64,
+    minigame: "reflex", mgTitle: "Back Room", mgFlavor: "He only turns his back once. Take it." },
+  { id: "c20", name: "Underground Auction", city: "tokyo", tier: 5, payout: 1400000, rep: 1350, duration: 145, baseChance: 0.19, heat: 74,
+    minigame: "pattern", mgTitle: "Bidder's Vault", mgFlavor: "Crack the lot case before the gavel falls." },
 ];
 
 const WEAPONS = [

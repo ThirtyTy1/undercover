@@ -41,6 +41,7 @@ function freshState() {
     watchInventory: { watchcheap: 0, watchsteel: 0, watchgold: 0, watchdiamond: 0, watchiced: 0 },
     watchOrders: [],
     nextWatchOrderAt: null,
+    currentCity: "detroit",
   };
 }
 
@@ -177,6 +178,7 @@ function takeContract(contractId) {
   if (Date.now() < state.burnedUntil) return;
   const c = CONTRACTS.find((c) => c.id === contractId);
   if (!c) return;
+  if ((c.city || "detroit") !== state.currentCity) return;
   if (currentTierIndex() < c.tier) return;
   if (c.unlockRep && state.rep < c.unlockRep) return;
   state.activeContract = { contractId, startedAt: Date.now(), duration: c.duration * 1000 };
@@ -257,6 +259,24 @@ function triggerBurned() {
   state.burnedUntil = Date.now() + 15000;
   state.stats.timesBurned++;
   addLog(`🔥 BURNED. Cover blown — lost ${fmt(lost)}, forced to go dark for 15s.`, "burn");
+}
+
+// ---------- World / travel ----------
+
+function hasPrivateJet() {
+  return FLEX_ITEMS.jets.some((j) => state.ownedFlex.includes(j.id));
+}
+
+function travelToCity(cityId) {
+  const city = CITIES.find((c) => c.id === cityId);
+  if (!city || city.id === state.currentCity) return;
+  if (city.requiresJet && !hasPrivateJet()) return;
+  if (state.cash < TRAVEL_COST) return;
+  state.cash -= TRAVEL_COST;
+  state.currentCity = cityId;
+  addLog(`Flew to ${city.name} — ${fmt(TRAVEL_COST)}`, "buy");
+  save();
+  render();
 }
 
 // ---------- Gun shop ----------
