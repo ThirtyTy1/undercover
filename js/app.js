@@ -34,6 +34,9 @@ function freshState() {
     nextAgentPayoutAt: null,
     businesses: [],
     nextBusinessPayoutAt: null,
+    drugInventory: { weed: 0, pens: 0, shrooms: 0, coke: 0 },
+    drugRequests: [],
+    nextDrugRequestAt: null,
   };
 }
 
@@ -878,6 +881,103 @@ function importSaveFile(file) {
   reader.readAsText(file);
 }
 
+// ---------- Drug dealing ----------
+
+function buyDrug(drugId, qty) {
+  const d = DRUGS.find((d) => d.id === drugId);
+  if (!d) return;
+  const cost = d.buyPrice * qty;
+  if (state.cash < cost) return;
+  state.cash -= cost;
+  state.drugInventory[drugId] = (state.drugInventory[drugId] || 0) + qty;
+  addLog(`Bought ${qty} ${d.unit}${qty > 1 ? "s" : ""} of ${d.name} from the Plug for ${fmt(cost)}`, "buy");
+  save();
+  render();
+  if (phoneOpenContact === "__plug__") renderPlugPanel();
+}
+
+function generateDrugRequest() {
+  if (state.drugRequests.length >= DRUG_REQUEST_MAX_PENDING) return;
+  const d = DRUGS[Math.floor(Math.random() * DRUGS.length)];
+  const [lo, hi] = DRUG_REQUEST_QTY_RANGE[d.id];
+  const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
+  const priceFactor = 0.7 + Math.random() * 0.25; // customers lowball a bit
+  const offerPrice = Math.round(d.baseSellPrice * qty * priceFactor);
+  state.drugRequests.push({
+    id: "req" + Date.now() + Math.floor(Math.random() * 1000),
+    drugId: d.id,
+    qty,
+    offerPrice,
+    expiresAt: Date.now() + DRUG_REQUEST_EXPIRE_SECONDS * 1000,
+  });
+  addLog(`New buyer wants ${qty} ${d.unit}${qty > 1 ? "s" : ""} of ${d.name}`, "info");
+}
+
+function processDrugRequests() {
+  const before = state.drugRequests.length;
+  state.drugRequests = state.drugRequests.filter((r) => Date.now() < r.expiresAt);
+  if (state.drugRequests.length < before && phoneOpenContact === "__requests__") renderDrugRequestsView();
+
+  if (!state.nextDrugRequestAt) {
+    state.nextDrugRequestAt = Date.now() + (DRUG_REQUEST_MIN_GAP_SECONDS + Math.random() * (DRUG_REQUEST_MAX_GAP_SECONDS - DRUG_REQUEST_MIN_GAP_SECONDS)) * 1000;
+    return;
+  }
+  if (Date.now() >= state.nextDrugRequestAt) {
+    generateDrugRequest();
+    state.nextDrugRequestAt = Date.now() + (DRUG_REQUEST_MIN_GAP_SECONDS + Math.random() * (DRUG_REQUEST_MAX_GAP_SECONDS - DRUG_REQUEST_MIN_GAP_SECONDS)) * 1000;
+    if (phoneOpenContact === "__requests__") renderDrugRequestsView();
+  }
+}
+
+function fulfillDrugSale(req, price) {
+  const d = DRUGS.find((d) => d.id === req.drugId);
+  state.drugInventory[req.drugId] -= req.qty;
+  state.cash += price;
+  state.heat = Math.min(100, state.heat + d.heat * req.qty);
+  state.stats.totalEarned += price;
+  return d;
+}
+
+function acceptDrugRequest(reqId) {
+  const req = state.drugRequests.find((r) => r.id === reqId);
+  if (!req) return;
+  if ((state.drugInventory[req.drugId] || 0) < req.qty) return;
+  const d = fulfillDrugSale(req, req.offerPrice);
+  state.drugRequests = state.drugRequests.filter((r) => r.id !== reqId);
+  addLog(`Sold ${req.qty} ${d.unit}${req.qty > 1 ? "s" : ""} of ${d.name} for ${fmt(req.offerPrice)}`, "success");
+  save();
+  render();
+  if (phoneOpenContact === "__requests__") renderDrugRequestsView();
+}
+
+function counterDrugRequest(reqId, pct, chance) {
+  const req = state.drugRequests.find((r) => r.id === reqId);
+  if (!req) return;
+  if ((state.drugInventory[req.drugId] || 0) < req.qty) return;
+  const counterPrice = Math.round(req.offerPrice * (1 + pct));
+  const success = Math.random() < chance;
+  state.drugRequests = state.drugRequests.filter((r) => r.id !== reqId);
+
+  if (success) {
+    const d = fulfillDrugSale(req, counterPrice);
+    addLog(`Countered and closed: ${req.qty} ${d.unit}${req.qty > 1 ? "s" : ""} of ${d.name} for ${fmt(counterPrice)}`, "success");
+  } else {
+    const d = DRUGS.find((d) => d.id === req.drugId);
+    addLog(`Buyer walked on the counter for ${d.name}. No deal.`, "fail");
+  }
+  save();
+  render();
+  if (phoneOpenContact === "__requests__") renderDrugRequestsView();
+}
+
+function declineDrugRequest(reqId) {
+  state.drugRequests = state.drugRequests.filter((r) => r.id !== reqId);
+  addLog("Declined a buyer's request.", "info");
+  save();
+  render();
+  if (phoneOpenContact === "__requests__") renderDrugRequestsView();
+}
+
 // ---------- Game loop ----------
 
 function gameTick() {
@@ -894,6 +994,7 @@ function gameTick() {
   processBankInterest();
   processAgentPayout();
   processBusinessPayout();
+  processDrugRequests();
 
   // mark active contract ready once its timer completes (resolution now waits on the mini-game)
   if (state.activeContract && !state.activeContract.ready) {

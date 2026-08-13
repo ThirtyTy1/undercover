@@ -220,6 +220,31 @@ const BUSINESSES = [
   },
 ];
 
+// Drug dealing: buy stock from the Plug, sell to buyers who text in.
+const DRUGS = [
+  { id: "weed", name: "Weed", unit: "oz", buyPrice: 150, baseSellPrice: 220, heat: 1 },
+  { id: "pens", name: "Weed Pens", unit: "pen", buyPrice: 40, baseSellPrice: 65, heat: 1 },
+  { id: "shrooms", name: "Shrooms", unit: "oz", buyPrice: 200, baseSellPrice: 320, heat: 2 },
+  { id: "coke", name: "Coke", unit: "gram", buyPrice: 60, baseSellPrice: 100, heat: 3 },
+];
+
+const DRUG_REQUEST_QTY_RANGE = {
+  weed: [1, 5],
+  pens: [2, 10],
+  shrooms: [1, 3],
+  coke: [1, 4],
+};
+
+const DRUG_REQUEST_EXPIRE_SECONDS = 90;
+const DRUG_REQUEST_MIN_GAP_SECONDS = 30;
+const DRUG_REQUEST_MAX_GAP_SECONDS = 60;
+const DRUG_REQUEST_MAX_PENDING = 3;
+
+const DRUG_COUNTER_OPTIONS = [
+  { pct: 0.2, chance: 0.65, label: "Counter +20%" },
+  { pct: 0.4, chance: 0.35, label: "Push +40%" },
+];
+
 const CONTACTS = [
   {
     id: "doc",

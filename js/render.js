@@ -34,6 +34,7 @@ function render() {
   renderTabContent();
   renderLog();
   renderBurnOverlay();
+  if (phoneOpenContact === "__requests__") renderDrugRequestsView();
 }
 
 function renderStats() {
@@ -498,6 +499,9 @@ function profileTabHTML() {
     <h3 class="cat-heading">Flex Owned (${state.ownedFlex.length})</h3>
     <div class="owned-grid">${ownedFlexHTML || '<div class="card-row">Nothing yet.</div>'}</div>
 
+    <h3 class="cat-heading">Product on Hand</h3>
+    <div class="card-row">${DRUGS.map((d) => `${d.name}: ${state.drugInventory[d.id] || 0} ${d.unit}${(state.drugInventory[d.id] || 0) === 1 ? "" : "s"}`).join(" · ")}</div>
+
     <h3 class="cat-heading">Case File Backup</h3>
     <div class="card-row">This game saves only to this browser. Export your case file to carry it to another device or browser, or import one to restore it.</div>
     <div class="crypto-action-group">
@@ -720,7 +724,19 @@ function renderPhoneContacts() {
   phoneOpenContact = null;
   document.getElementById("phone-title").textContent = "Contacts";
   document.getElementById("phone-back").classList.add("hidden");
-  document.getElementById("phone-body").innerHTML = CONTACTS.map((c) => {
+
+  const pendingCount = state.drugRequests.length;
+  const specialRows = `
+    <div class="phone-contact" data-contact="__requests__">
+      <div class="phone-contact-name">Customers ${pendingCount > 0 ? `<span class="phone-badge">${pendingCount}</span>` : ""}</div>
+      <div class="phone-contact-preview">${pendingCount > 0 ? `${pendingCount} buyer${pendingCount > 1 ? "s" : ""} waiting on you` : "No buyers right now"}</div>
+    </div>
+    <div class="phone-contact" data-contact="__plug__">
+      <div class="phone-contact-name">The Plug <span class="phone-contact-role">Supplier</span></div>
+      <div class="phone-contact-preview">Reup your stock</div>
+    </div>`;
+
+  const contactRows = CONTACTS.map((c) => {
     const thread = state.phone.threads[c.id];
     const preview = thread && thread.length ? thread[thread.length - 1].text : c.intro;
     return `
@@ -729,6 +745,65 @@ function renderPhoneContacts() {
         <div class="phone-contact-preview">${preview}</div>
       </div>`;
   }).join("");
+
+  document.getElementById("phone-body").innerHTML = specialRows + contactRows;
+}
+
+function renderPlugPanel() {
+  phoneOpenContact = "__plug__";
+  document.getElementById("phone-title").textContent = "The Plug";
+  document.getElementById("phone-back").classList.remove("hidden");
+
+  const rows = DRUGS.map((d) => {
+    const owned = state.drugInventory[d.id] || 0;
+    return `
+      <div class="plug-row">
+        <div class="plug-row-title">${d.name} <span class="plug-row-stock">${owned} ${d.unit}${owned === 1 ? "" : "s"} on hand</span></div>
+        <div class="card-row">${fmt(d.buyPrice)} / ${d.unit}</div>
+        <div class="crypto-action-group">
+          <button class="btn" data-action="buy-drug" data-drug="${d.id}" data-qty="5" ${state.cash < d.buyPrice * 5 ? "disabled" : ""}>Buy 5 — ${fmt(d.buyPrice * 5)}</button>
+          <button class="btn" data-action="buy-drug" data-drug="${d.id}" data-qty="20" ${state.cash < d.buyPrice * 20 ? "disabled" : ""}>Buy 20 — ${fmt(d.buyPrice * 20)}</button>
+        </div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+}
+
+function renderDrugRequestsView() {
+  phoneOpenContact = "__requests__";
+  document.getElementById("phone-title").textContent = "Customers";
+  document.getElementById("phone-back").classList.remove("hidden");
+
+  if (state.drugRequests.length === 0) {
+    document.getElementById("phone-body").innerHTML = `<div class="hint">No buyers right now. Check back soon.</div>`;
+    return;
+  }
+
+  const rows = state.drugRequests
+    .map((req) => {
+      const d = DRUGS.find((x) => x.id === req.drugId);
+      const remain = Math.max(0, Math.ceil((req.expiresAt - Date.now()) / 1000));
+      const haveEnough = (state.drugInventory[req.drugId] || 0) >= req.qty;
+      const counterBtns = DRUG_COUNTER_OPTIONS.map(
+        (opt) =>
+          `<button class="btn launder" data-action="counter-drug-request" data-id="${req.id}" data-pct="${opt.pct}" data-chance="${opt.chance}" ${haveEnough ? "" : "disabled"}>${opt.label} (${Math.round(opt.chance * 100)}%)</button>`
+      ).join("");
+      return `
+        <div class="plug-row">
+          <div class="plug-row-title">Wants ${req.qty} ${d.unit}${req.qty > 1 ? "s" : ""} of ${d.name}</div>
+          <div class="card-row">Offering ${fmt(req.offerPrice)} · expires in ${remain}s</div>
+          ${!haveEnough ? `<div class="locked-tag">Not enough ${d.name} in stock</div>` : ""}
+          <div class="crypto-action-group">
+            <button class="btn" data-action="accept-drug-request" data-id="${req.id}" ${haveEnough ? "" : "disabled"}>Accept — ${fmt(req.offerPrice)}</button>
+            ${counterBtns}
+            <button class="btn sell" data-action="decline-drug-request" data-id="${req.id}">Decline</button>
+          </div>
+        </div>`;
+    })
+    .join("");
+
+  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
 }
 
 function renderPhoneThread(contactId) {
@@ -772,7 +847,14 @@ document.getElementById("phone-body").addEventListener("click", (e) => {
     const contactId = actionBtn.dataset.contact;
     if (action === "phone-text") sendPhoneText(contactId);
     else if (action === "phone-money") sendPhoneMoney(contactId, Number(actionBtn.dataset.amount));
+    else if (action === "buy-drug") buyDrug(actionBtn.dataset.drug, Number(actionBtn.dataset.qty));
+    else if (action === "accept-drug-request") acceptDrugRequest(actionBtn.dataset.id);
+    else if (action === "counter-drug-request") counterDrugRequest(actionBtn.dataset.id, Number(actionBtn.dataset.pct), Number(actionBtn.dataset.chance));
+    else if (action === "decline-drug-request") declineDrugRequest(actionBtn.dataset.id);
   } else if (contactRow) {
-    renderPhoneThread(contactRow.dataset.contact);
+    const id = contactRow.dataset.contact;
+    if (id === "__plug__") renderPlugPanel();
+    else if (id === "__requests__") renderDrugRequestsView();
+    else renderPhoneThread(id);
   }
 });
