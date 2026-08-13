@@ -38,6 +38,8 @@ function freshState() {
     drugRequests: [],
     nextDrugRequestAt: null,
     armsInventory: { pistol: 0, revolver: 0, smg: 0, shotgun: 0, rifle: 0, sniper: 0 },
+    gunOrders: [],
+    nextGunOrderAt: null,
   };
 }
 
@@ -1116,21 +1118,86 @@ function buyArmsStock(gunId, qty) {
   if (phoneOpenContact === "__armsdealer__") renderArmsDealerPanel();
 }
 
-function sellArmsStock(gunId, qty) {
-  const g = ARMS_CATALOG.find((g) => g.id === gunId);
-  if (!g) return;
-  const owned = state.armsInventory[gunId] || 0;
-  qty = Math.min(qty, owned);
-  if (qty <= 0) return;
-  const proceeds = g.sellPrice * qty;
-  state.armsInventory[gunId] -= qty;
-  state.cash += proceeds;
-  state.heat = Math.min(100, state.heat + g.heat * qty);
-  state.stats.totalEarned += proceeds;
-  addLog(`Sold ${qty} ${g.name}${qty > 1 ? "s" : ""} for ${fmt(proceeds)}`, "success");
+function generateGunOrder() {
+  if (state.gunOrders.length >= GUN_ORDER_MAX_PENDING) return;
+  const g = ARMS_CATALOG[Math.floor(Math.random() * ARMS_CATALOG.length)];
+  const [lo, hi] = GUN_ORDER_QTY_RANGE[g.id];
+  const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
+  const priceFactor = 0.7 + Math.random() * 0.25;
+  const offerPrice = Math.round(g.sellPrice * qty * priceFactor);
+  state.gunOrders.push({
+    id: "gorder" + Date.now() + Math.floor(Math.random() * 1000),
+    gunId: g.id,
+    qty,
+    offerPrice,
+    expiresAt: Date.now() + GUN_ORDER_EXPIRE_SECONDS * 1000,
+  });
+  addLog(`New order: buyer wants ${qty} ${g.name}${qty > 1 ? "s" : ""}`, "info");
+}
+
+function processGunOrders() {
+  const before = state.gunOrders.length;
+  state.gunOrders = state.gunOrders.filter((o) => Date.now() < o.expiresAt);
+  if (state.gunOrders.length < before && phoneOpenContact === "__gunorders__") renderGunOrdersView();
+
+  if (!state.nextGunOrderAt) {
+    state.nextGunOrderAt = Date.now() + (GUN_ORDER_MIN_GAP_SECONDS + Math.random() * (GUN_ORDER_MAX_GAP_SECONDS - GUN_ORDER_MIN_GAP_SECONDS)) * 1000;
+    return;
+  }
+  if (Date.now() >= state.nextGunOrderAt) {
+    generateGunOrder();
+    state.nextGunOrderAt = Date.now() + (GUN_ORDER_MIN_GAP_SECONDS + Math.random() * (GUN_ORDER_MAX_GAP_SECONDS - GUN_ORDER_MIN_GAP_SECONDS)) * 1000;
+    if (phoneOpenContact === "__gunorders__") renderGunOrdersView();
+  }
+}
+
+function fulfillGunOrder(order, price) {
+  const g = ARMS_CATALOG.find((g) => g.id === order.gunId);
+  state.armsInventory[order.gunId] -= order.qty;
+  state.cash += price;
+  state.heat = Math.min(100, state.heat + g.heat * order.qty);
+  state.stats.totalEarned += price;
+  return g;
+}
+
+function acceptGunOrder(orderId) {
+  const order = state.gunOrders.find((o) => o.id === orderId);
+  if (!order) return;
+  if ((state.armsInventory[order.gunId] || 0) < order.qty) return;
+  const g = fulfillGunOrder(order, order.offerPrice);
+  state.gunOrders = state.gunOrders.filter((o) => o.id !== orderId);
+  addLog(`Sold ${order.qty} ${g.name}${order.qty > 1 ? "s" : ""} for ${fmt(order.offerPrice)}`, "success");
   save();
   render();
-  if (phoneOpenContact === "__sellguns__") renderSellGunsPanel();
+  if (phoneOpenContact === "__gunorders__") renderGunOrdersView();
+}
+
+function counterGunOrder(orderId, pct, chance) {
+  const order = state.gunOrders.find((o) => o.id === orderId);
+  if (!order) return;
+  if ((state.armsInventory[order.gunId] || 0) < order.qty) return;
+  const counterPrice = Math.round(order.offerPrice * (1 + pct));
+  const success = Math.random() < chance;
+  state.gunOrders = state.gunOrders.filter((o) => o.id !== orderId);
+
+  if (success) {
+    const g = fulfillGunOrder(order, counterPrice);
+    addLog(`Countered and closed: ${order.qty} ${g.name}${order.qty > 1 ? "s" : ""} for ${fmt(counterPrice)}`, "success");
+  } else {
+    const g = ARMS_CATALOG.find((g) => g.id === order.gunId);
+    addLog(`Buyer walked on the counter for ${g.name}. No deal.`, "fail");
+  }
+  save();
+  render();
+  if (phoneOpenContact === "__gunorders__") renderGunOrdersView();
+}
+
+function declineGunOrder(orderId) {
+  state.gunOrders = state.gunOrders.filter((o) => o.id !== orderId);
+  addLog("Declined a gun order.", "info");
+  save();
+  render();
+  if (phoneOpenContact === "__gunorders__") renderGunOrdersView();
 }
 
 // ---------- Game loop ----------
@@ -1150,6 +1217,7 @@ function gameTick() {
   processAgentPayout();
   processBusinessPayout();
   processDrugRequests();
+  processGunOrders();
 
   // mark active contract ready once its timer completes (resolution now waits on the mini-game)
   if (state.activeContract && !state.activeContract.ready) {

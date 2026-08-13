@@ -5,6 +5,8 @@ const TIERS = [
   { name: "Fixer", repReq: 100 },
   { name: "Ghost", repReq: 400 },
   { name: "Legend", repReq: 1000 },
+  { name: "Kingmaker", repReq: 1800 },
+  { name: "Shadow Don", repReq: 2500 },
 ];
 
 function tierForRep(rep) {
@@ -44,6 +46,12 @@ const CONTRACTS = [
     minigame: "pattern", mgTitle: "Vault Access", mgFlavor: "Replicate the embassy's security sequence." },
   { id: "c12", name: "The Kingpin", tier: 3, payout: 600000, rep: 800, duration: 120, baseChance: 0.28, heat: 55,
     minigame: "takedown", mgTitle: "Final Stand", mgFlavor: "Drop every last guard between you and him." },
+  // Tier 4 - Kingmaker
+  { id: "c13", name: "Silence the Board", tier: 4, payout: 800000, rep: 950, duration: 100, baseChance: 0.25, heat: 60,
+    minigame: "pattern", mgTitle: "Corporate Coup", mgFlavor: "Erase every trace before the board convenes." },
+  // Tier 5 - Shadow Don
+  { id: "c14", name: "Take the Crown", tier: 5, payout: 1100000, rep: 1200, duration: 130, baseChance: 0.22, heat: 68,
+    minigame: "takedown", mgTitle: "Seize the Throne", mgFlavor: "Drop everyone standing between you and the top." },
 ];
 
 const WEAPONS = [
@@ -286,6 +294,24 @@ const DRUG_REQUEST_MAX_GAP_SECONDS = 60;
 const DRUG_REQUEST_MAX_PENDING = 3;
 
 const DRUG_COUNTER_OPTIONS = [
+  { pct: 0.2, chance: 0.65, label: "Counter +20%" },
+  { pct: 0.4, chance: 0.35, label: "Push +40%" },
+];
+
+// Gun orders: buyers text in wanting specific stock from your arms inventory.
+const GUN_ORDER_QTY_RANGE = {
+  pistol: [1, 3],
+  revolver: [1, 2],
+  smg: [1, 2],
+  shotgun: [1, 2],
+  rifle: [1, 1],
+  sniper: [1, 1],
+};
+const GUN_ORDER_EXPIRE_SECONDS = 90;
+const GUN_ORDER_MIN_GAP_SECONDS = 35;
+const GUN_ORDER_MAX_GAP_SECONDS = 70;
+const GUN_ORDER_MAX_PENDING = 3;
+const GUN_COUNTER_OPTIONS = [
   { pct: 0.2, chance: 0.65, label: "Counter +20%" },
   { pct: 0.4, chance: 0.35, label: "Push +40%" },
 ];
