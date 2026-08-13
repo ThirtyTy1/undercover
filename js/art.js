@@ -592,6 +592,12 @@ const ITEM_PHOTO = {
   neck7: "assets/items/neck7.webp",
   neck8: "assets/items/neck8.jpg",
   rent4: "assets/items/rent4.webp",
+  car13: "assets/items/car13.jpg",
+  car14: "assets/items/car14.jpg",
+  car15: "assets/items/car15.jpg",
+  cloth8: "assets/items/cloth8.jpg",
+  buy10: "assets/items/buy10.jpg",
+  jet5: "assets/items/jet5.jpg",
 };
 
 function itemArtSVG(id, size = 64) {

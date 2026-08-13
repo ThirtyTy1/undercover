@@ -83,6 +83,9 @@ const FLEX_ITEMS = {
     { id: "car7", name: "Luxury Sedan", cost: 135000, heatReduction: 0.05, payoutBoost: 0.04 },
     { id: "car8", name: "Supercar", cost: 315000, heatReduction: 0.07, payoutBoost: 0.055 },
     { id: "car4", name: "Lamborghini", cost: 560000, heatReduction: 0.08, payoutBoost: 0.06 },
+    { id: "car14", name: "Ferrari 488", cost: 620000, heatReduction: 0.085, payoutBoost: 0.065 },
+    { id: "car13", name: "McLaren 720S", cost: 680000, heatReduction: 0.09, payoutBoost: 0.07 },
+    { id: "car15", name: "Lamborghini Revuelto", cost: 780000, heatReduction: 0.095, payoutBoost: 0.075 },
     { id: "car5", name: "Bugatti", cost: 3400000, heatReduction: 0.12, payoutBoost: 0.1 },
     { id: "car9", name: "Hypercar", cost: 3900000, heatReduction: 0.13, payoutBoost: 0.11 },
     { id: "car12", name: "Track Hypercar", cost: 4700000, heatReduction: 0.14, payoutBoost: 0.12 },
@@ -91,6 +94,7 @@ const FLEX_ITEMS = {
     { id: "jet3", name: "Cirrus Vision Jet", cost: 6000000, heatReduction: 0.15, payoutBoost: 0.12 },
     { id: "jet4", name: "HondaJet", cost: 9000000, heatReduction: 0.16, payoutBoost: 0.135 },
     { id: "jet2", name: "Gulfstream Private Jet", cost: 22000000, heatReduction: 0.19, payoutBoost: 0.16 },
+    { id: "jet5", name: "Gulfstream G650ER", cost: 38000000, heatReduction: 0.205, payoutBoost: 0.175 },
     { id: "jet1", name: "Gulfstream G700", cost: 55000000, heatReduction: 0.22, payoutBoost: 0.19 },
   ],
   watches: [
@@ -125,6 +129,7 @@ const FLEX_ITEMS = {
     { id: "cloth3", name: "Tailored Suit", cost: 5000, payoutBoost: 0.05, repBoost: 0.02 },
     { id: "cloth7", name: "Formal Black Suit", cost: 8000, payoutBoost: 0.06, repBoost: 0.03 },
     { id: "cloth4", name: "Luxury Brand Set", cost: 20000, payoutBoost: 0.08, repBoost: 0.04 },
+    { id: "cloth8", name: "LV Varsity Fit", cost: 45000, payoutBoost: 0.1, repBoost: 0.055 },
     { id: "cloth5", name: "Custom Bespoke Wardrobe", cost: 75000, payoutBoost: 0.12, repBoost: 0.07 },
   ],
 };
@@ -146,6 +151,7 @@ const HOUSES = {
     { id: "buy2", name: "Penthouse Condo", cost: 2800000, taxCost: 2800, heatReduction: 0.1, repReq: 400 },
     { id: "buy6", name: "Beachfront Villa", cost: 6700000, taxCost: 5600, heatReduction: 0.12, repReq: 1000 },
     { id: "buy3", name: "Private Estate", cost: 13500000, taxCost: 9000, heatReduction: 0.15, repReq: 1000 },
+    { id: "buy10", name: "Modern Glass Estate", cost: 18000000, taxCost: 11000, heatReduction: 0.165, repReq: 1400 },
     { id: "buy7", name: "Mega Mansion", cost: 28000000, taxCost: 17000, heatReduction: 0.18, repReq: 1800 },
     { id: "buy9", name: "Royal Estate", cost: 39000000, taxCost: 20000, heatReduction: 0.19, repReq: 1800 },
     { id: "buy4", name: "Private Island Compound", cost: 50000000, taxCost: 22000, heatReduction: 0.2, repReq: 1000 },
