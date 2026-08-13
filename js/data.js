@@ -142,6 +142,21 @@ const SLOT_SYMBOLS = [
   { symbol: "7️⃣", weight: 3, payout: 50 },
 ];
 
+// Casino: European single-zero roulette (0-36)
+const ROULETTE_RED_NUMBERS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+const ROULETTE_OUTSIDE_BETS = [
+  { type: "red", label: "Red", mult: 2 },
+  { type: "black", label: "Black", mult: 2 },
+  { type: "odd", label: "Odd", mult: 2 },
+  { type: "even", label: "Even", mult: 2 },
+  { type: "low", label: "1-18", mult: 2 },
+  { type: "high", label: "19-36", mult: 2 },
+  { type: "dozen1", label: "1st 12", mult: 3 },
+  { type: "dozen2", label: "2nd 12", mult: 3 },
+  { type: "dozen3", label: "3rd 12", mult: 3 },
+];
+const ROULETTE_STRAIGHT_MULT = 36;
+
 // Businesses: one-time purchases, own or don't. Passive income plus a real perk.
 const BUSINESS_CYCLE_SECONDS = 60;
 

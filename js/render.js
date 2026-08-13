@@ -283,8 +283,10 @@ function casinoTabHTML() {
     <div class="casino-nav">
       <button class="btn ${casinoView === "blackjack" ? "equipped" : ""}" data-action="casino-view" data-view="blackjack">Blackjack</button>
       <button class="btn ${casinoView === "slots" ? "equipped" : ""}" data-action="casino-view" data-view="slots">Slots</button>
+      <button class="btn ${casinoView === "roulette" ? "equipped" : ""}" data-action="casino-view" data-view="roulette">Roulette</button>
     </div>`;
-  return nav + (casinoView === "blackjack" ? blackjackHTML() : slotsHTML());
+  const body = casinoView === "blackjack" ? blackjackHTML() : casinoView === "slots" ? slotsHTML() : rouletteHTML();
+  return nav + body;
 }
 
 function blackjackHTML() {
@@ -363,6 +365,47 @@ function slotsHTML() {
       <h3 class="cat-heading">Payouts (3 of a kind)</h3>
       ${payoutTable}
       <div class="hint">Any 2 matching returns half your bet.</div>
+    </div>`;
+}
+
+function rouletteHTML() {
+  const spinning = rouletteGame && rouletteGame.phase === "spinning";
+  const resultColorCls = rouletteGame && !spinning ? rouletteGame.resultColor : "";
+  const resultNumberText = spinning ? "?" : rouletteGame ? rouletteGame.resultNumber : "–";
+
+  const numberCells = Array.from({ length: 37 }, (_, n) => n)
+    .map((n) => {
+      const color = rouletteColor(n);
+      const selected = rouletteSelection.type === "straight" && rouletteSelection.number === n;
+      return `<div class="roulette-cell ${color} ${selected ? "selected" : ""}" data-action="roulette-select" data-type="straight" data-number="${n}">${n}</div>`;
+    })
+    .join("");
+
+  const outsideBtns = ROULETTE_OUTSIDE_BETS.map((b) => {
+    const selected = rouletteSelection.type === b.type;
+    return `<button class="btn roulette-outside ${selected ? "equipped" : ""}" data-action="roulette-select" data-type="${b.type}">${b.label} (${b.mult - 1}:1)</button>`;
+  }).join("");
+
+  const betLabel = rouletteBetLabel();
+  const resultCls = rouletteGame && !spinning
+    ? rouletteGame.resultText.includes("WIN")
+      ? "great"
+      : "fail"
+    : "";
+
+  return `
+    <div class="casino-table">
+      <div class="roulette-result ${spinning ? "spinning" : resultColorCls}">${resultNumberText}</div>
+      ${rouletteGame && rouletteGame.resultText && !spinning ? `<div class="mg-result-text ${resultCls}">${rouletteGame.resultText}</div>` : ""}
+      <div class="roulette-grid">${numberCells}</div>
+      <div class="crypto-action-group">${outsideBtns}</div>
+      <div class="card-row">Bet: ${betLabel || "None selected — tap a number or an outside bet"}</div>
+      <div class="crypto-action-group">
+        <button class="btn" data-action="roulette-spin" data-amount="100" ${!rouletteSelection.type || spinning || state.cash < 100 ? "disabled" : ""}>Spin ${fmt(100)}</button>
+        <button class="btn" data-action="roulette-spin" data-amount="500" ${!rouletteSelection.type || spinning || state.cash < 500 ? "disabled" : ""}>Spin ${fmt(500)}</button>
+        <button class="btn" data-action="roulette-spin" data-amount="2000" ${!rouletteSelection.type || spinning || state.cash < 2000 ? "disabled" : ""}>Spin ${fmt(2000)}</button>
+      </div>
+      <div class="hint">Straight number pays 35:1. Dozens pay 2:1. Red/Black/Odd/Even/1-18/19-36 pay 1:1.</div>
     </div>`;
 }
 
@@ -651,6 +694,8 @@ function bindTabEvents() {
       else if (action === "bj-double") bjDouble();
       else if (action === "bj-new") bjNewRound();
       else if (action === "slot-spin") spinSlots(Number(btn.dataset.amount));
+      else if (action === "roulette-select") selectRouletteBet(btn.dataset.type, btn.dataset.number);
+      else if (action === "roulette-spin") spinRoulette(Number(btn.dataset.amount));
     });
   });
 

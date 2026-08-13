@@ -821,6 +821,85 @@ function resolveSlots(reels, bet) {
   render();
 }
 
+// ---------- Roulette ----------
+
+let rouletteGame = null; // { betType, betNumber, betAmount, phase: 'spinning'|'done', resultNumber, resultColor, resultText }
+let rouletteSelection = { type: null, number: null };
+
+function rouletteColor(n) {
+  if (n === 0) return "green";
+  return ROULETTE_RED_NUMBERS.includes(n) ? "red" : "black";
+}
+
+function selectRouletteBet(type, number) {
+  if (rouletteGame && rouletteGame.phase === "spinning") return;
+  rouletteSelection = { type, number: number !== undefined && number !== null ? Number(number) : null };
+  render();
+}
+
+function rouletteBetLabel() {
+  if (!rouletteSelection.type) return null;
+  if (rouletteSelection.type === "straight") return `Straight #${rouletteSelection.number}`;
+  const bet = ROULETTE_OUTSIDE_BETS.find((b) => b.type === rouletteSelection.type);
+  return bet ? bet.label : rouletteSelection.type;
+}
+
+function spinRoulette(amount) {
+  if (!rouletteSelection.type) return;
+  amount = Math.floor(Math.min(amount, state.cash));
+  if (amount <= 0 || (rouletteGame && rouletteGame.phase === "spinning")) return;
+  state.cash -= amount;
+
+  const betType = rouletteSelection.type;
+  const betNumber = rouletteSelection.number;
+  const resultNumber = Math.floor(Math.random() * 37); // 0-36
+
+  rouletteGame = { betType, betNumber, betAmount: amount, phase: "spinning", resultNumber: null, resultColor: null, resultText: null };
+  save();
+  render();
+
+  setTimeout(() => {
+    resolveRoulette(resultNumber, amount, betType, betNumber);
+  }, 900);
+}
+
+function resolveRoulette(resultNumber, amount, betType, betNumber) {
+  const color = rouletteColor(resultNumber);
+  let win = false;
+  let mult = 0;
+
+  if (betType === "straight") {
+    win = resultNumber === betNumber;
+    mult = ROULETTE_STRAIGHT_MULT;
+  } else {
+    const bet = ROULETTE_OUTSIDE_BETS.find((b) => b.type === betType);
+    mult = bet ? bet.mult : 0;
+    if (betType === "red") win = color === "red";
+    else if (betType === "black") win = color === "black";
+    else if (betType === "odd") win = resultNumber !== 0 && resultNumber % 2 === 1;
+    else if (betType === "even") win = resultNumber !== 0 && resultNumber % 2 === 0;
+    else if (betType === "low") win = resultNumber >= 1 && resultNumber <= 18;
+    else if (betType === "high") win = resultNumber >= 19 && resultNumber <= 36;
+    else if (betType === "dozen1") win = resultNumber >= 1 && resultNumber <= 12;
+    else if (betType === "dozen2") win = resultNumber >= 13 && resultNumber <= 24;
+    else if (betType === "dozen3") win = resultNumber >= 25 && resultNumber <= 36;
+  }
+
+  const payout = win ? amount * mult : 0;
+  state.cash += payout;
+
+  rouletteGame.phase = "done";
+  rouletteGame.resultNumber = resultNumber;
+  rouletteGame.resultColor = color;
+  rouletteGame.resultText = win
+    ? `${resultNumber} ${color.toUpperCase()} — WIN +${fmt(payout - amount)}`
+    : `${resultNumber} ${color.toUpperCase()} — No win, -${fmt(amount)}`;
+
+  addLog(`Roulette: ${rouletteGame.resultText}`, win ? "success" : "fail");
+  save();
+  render();
+}
+
 // ---------- Save file transfer ----------
 
 function exportSave() {

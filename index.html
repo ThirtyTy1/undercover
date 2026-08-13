@@ -41,13 +41,25 @@
   <div id="phone-widget">
     <button id="phone-toggle" class="phone-toggle" title="Burner Phone">📱</button>
     <div id="phone-panel" class="phone-panel hidden">
-      <div class="phone-screen">
-        <div class="phone-header">
-          <button id="phone-back" class="phone-back hidden">‹</button>
-          <span id="phone-title" class="phone-title">Contacts</span>
-          <button id="phone-close" class="phone-close">×</button>
+      <div class="iphone-frame">
+        <div class="iphone-island"></div>
+        <div class="phone-screen">
+          <div class="iphone-statusbar">
+            <span class="iphone-time">9:41</span>
+            <div class="iphone-statusbar-icons">
+              <div class="iphone-signal"><span></span><span></span><span></span><span></span></div>
+              <span class="iphone-5g">5G</span>
+              <div class="iphone-battery"><div class="iphone-battery-fill"></div></div>
+            </div>
+          </div>
+          <div class="phone-header">
+            <button id="phone-back" class="phone-back hidden">‹</button>
+            <span id="phone-title" class="phone-title">Contacts</span>
+            <button id="phone-close" class="phone-close">×</button>
+          </div>
+          <div id="phone-body" class="phone-body"></div>
         </div>
-        <div id="phone-body" class="phone-body"></div>
+        <div class="iphone-home-indicator"></div>
       </div>
     </div>
   </div>
