@@ -545,6 +545,9 @@ function profileTabHTML() {
     <h3 class="cat-heading">Product on Hand</h3>
     <div class="card-row">${DRUGS.map((d) => `${d.name}: ${state.drugInventory[d.id] || 0} ${d.unit}${(state.drugInventory[d.id] || 0) === 1 ? "" : "s"}`).join(" · ")}</div>
 
+    <h3 class="cat-heading">Arms on Hand</h3>
+    <div class="card-row">${ARMS_CATALOG.map((g) => `${g.name}: ${state.armsInventory[g.id] || 0}`).join(" · ")}</div>
+
     <h3 class="cat-heading">Case File Backup</h3>
     <div class="card-row">This game saves only to this browser. Export your case file to carry it to another device or browser, or import one to restore it.</div>
     <div class="crypto-action-group">
@@ -580,17 +583,18 @@ function laylowTabHTML() {
       </div>`
   ).join("");
 
-  const totalAgents = AGENTS.reduce((sum, a) => sum + agentCount(a.id), 0);
+  const totalAgents = state.hiredAgents.length;
+  const readyAgents = state.hiredAgents.filter(agentIsReady).length;
   const remain = state.nextAgentPayoutAt ? Math.max(0, Math.ceil((state.nextAgentPayoutAt - Date.now()) / 1000)) : null;
   const agentStatus =
     totalAgents > 0
-      ? `<div class="active-contract"><div class="active-title">${totalAgents} agent${totalAgents === 1 ? "" : "s"} on payroll</div><div class="card-row">Next payout in ${remain}s</div></div>`
+      ? `<div class="active-contract"><div class="active-title">${readyAgents}/${totalAgents} agents field-ready</div><div class="card-row">Next payout in ${remain}s</div></div>`
       : `<div class="active-contract">No agents hired — you're doing every job yourself.</div>`;
 
   const agentCards = AGENTS.map((a) => {
-    const owned = agentCount(a.id);
+    const owned = agentTypeCount(a.id);
     const locked = state.rep < a.repReq;
-    const cost = Math.round(agentCost(a) * (1 - businessPerk("agentDiscount")));
+    const cost = Math.round(agentHireCost(a) * (1 - businessPerk("agentDiscount")));
     return `
       <div class="card ${locked ? "locked" : ""} ${owned > 0 ? "owned" : ""}">
         <div class="card-title">${a.name}${owned > 0 ? ` (${owned})` : ""}</div>
@@ -601,7 +605,6 @@ function laylowTabHTML() {
             ? `<div class="locked-tag">Requires ${a.repReq} rep</div>`
             : `<button class="btn" data-action="hire-agent" data-id="${a.id}" ${state.cash < cost ? "disabled" : ""}>Hire — ${fmt(cost)}</button>`
         }
-        ${owned > 0 ? `<button class="btn sell" data-action="dismiss-agent" data-id="${a.id}">Dismiss — ${fmt(Math.round(a.cost * SELL_RATE))}</button>` : ""}
       </div>`;
   }).join("");
 
@@ -609,7 +612,42 @@ function laylowTabHTML() {
     <div class="grid">${cards}</div>
     <h3 class="cat-heading">Agents</h3>
     ${agentStatus}
-    <div class="grid">${agentCards}</div>`;
+    <div class="grid">${agentCards}</div>
+    <h3 class="cat-heading">Your Roster</h3>
+    <div class="card-row">Every agent needs a gun, clothing, and a car before they earn you anything.</div>
+    <div class="grid">${agentRosterHTML()}</div>`;
+}
+
+function agentGearRow(unit, slot, catalog, currentId) {
+  const current = catalog.find((g) => g.id === currentId);
+  const options = catalog
+    .map(
+      (g) =>
+        `<button class="btn ${g.id === currentId ? "equipped" : ""}" data-action="equip-agent" data-id="${unit.id}" data-slot="${slot}" data-gear="${g.id}" ${g.id === currentId || state.cash < g.cost ? "disabled" : ""}>${g.name} — ${fmt(g.cost)}</button>`
+    )
+    .join("");
+  return `
+    <div class="card-row">${slot === "gun" ? "Gun" : slot === "clothing" ? "Clothing" : "Car"}: ${current ? current.name : "None"}</div>
+    <div class="crypto-action-group">${options}</div>`;
+}
+
+function agentRosterHTML() {
+  if (state.hiredAgents.length === 0) return `<div class="card-row">No agents hired yet.</div>`;
+  return state.hiredAgents
+    .map((unit, idx) => {
+      const type = AGENTS.find((a) => a.id === unit.typeId);
+      const ready = agentIsReady(unit);
+      return `
+        <div class="card ${ready ? "owned" : ""}">
+          <div class="card-title">${type ? type.name : "Agent"} #${idx + 1}</div>
+          <div class="card-row">${ready ? `Field ready · +${Math.round(agentGearBonus(unit) * 100)}% income` : "Needs gear to work"}</div>
+          ${agentGearRow(unit, "gun", AGENT_GEAR.guns, unit.gunId)}
+          ${agentGearRow(unit, "clothing", AGENT_GEAR.clothing, unit.clothingId)}
+          ${agentGearRow(unit, "car", AGENT_GEAR.cars, unit.carId)}
+          <button class="btn sell" data-action="dismiss-agent" data-id="${unit.id}">Dismiss — ${fmt(type ? Math.round(type.cost * SELL_RATE) : 0)}</button>
+        </div>`;
+    })
+    .join("");
 }
 
 function businessesTabHTML() {
@@ -663,6 +701,7 @@ function bindTabEvents() {
       else if (action === "lay-low") doLayLow(id);
       else if (action === "hire-agent") hireAgent(id);
       else if (action === "dismiss-agent") dismissAgent(id);
+      else if (action === "equip-agent") equipAgentGear(btn.dataset.id, btn.dataset.slot, btn.dataset.gear);
       else if (action === "buy-business") buyBusiness(id);
       else if (action === "sell-business") sellBusiness(id);
       else if (action === "export-save") exportSave();
@@ -779,6 +818,14 @@ function renderPhoneContacts() {
     <div class="phone-contact" data-contact="__plug__">
       <div class="phone-contact-name">The Plug <span class="phone-contact-role">Supplier</span></div>
       <div class="phone-contact-preview">Reup your stock</div>
+    </div>
+    <div class="phone-contact" data-contact="__armsdealer__">
+      <div class="phone-contact-name">Arms Dealer <span class="phone-contact-role">Supplier</span></div>
+      <div class="phone-contact-preview">Guns, wholesale</div>
+    </div>
+    <div class="phone-contact" data-contact="__sellguns__">
+      <div class="phone-contact-name">Sell Guns</div>
+      <div class="phone-contact-preview">Move your gun stock for cash</div>
     </div>`;
 
   const contactRows = CONTACTS.map((c) => {
@@ -808,6 +855,48 @@ function renderPlugPanel() {
         <div class="crypto-action-group">
           <button class="btn" data-action="buy-drug" data-drug="${d.id}" data-qty="5" ${state.cash < d.buyPrice * 5 ? "disabled" : ""}>Buy 5 — ${fmt(d.buyPrice * 5)}</button>
           <button class="btn" data-action="buy-drug" data-drug="${d.id}" data-qty="20" ${state.cash < d.buyPrice * 20 ? "disabled" : ""}>Buy 20 — ${fmt(d.buyPrice * 20)}</button>
+        </div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+}
+
+function renderArmsDealerPanel() {
+  phoneOpenContact = "__armsdealer__";
+  document.getElementById("phone-title").textContent = "Arms Dealer";
+  document.getElementById("phone-back").classList.remove("hidden");
+
+  const rows = ARMS_CATALOG.map((g) => {
+    const owned = state.armsInventory[g.id] || 0;
+    return `
+      <div class="plug-row">
+        <div class="plug-row-title">${g.name} <span class="plug-row-stock">${owned} on hand</span></div>
+        <div class="card-row">${fmt(g.buyPrice)} each</div>
+        <div class="crypto-action-group">
+          <button class="btn" data-action="buy-arms" data-gun="${g.id}" data-qty="1" ${state.cash < g.buyPrice ? "disabled" : ""}>Buy 1 — ${fmt(g.buyPrice)}</button>
+          <button class="btn" data-action="buy-arms" data-gun="${g.id}" data-qty="5" ${state.cash < g.buyPrice * 5 ? "disabled" : ""}>Buy 5 — ${fmt(g.buyPrice * 5)}</button>
+        </div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+}
+
+function renderSellGunsPanel() {
+  phoneOpenContact = "__sellguns__";
+  document.getElementById("phone-title").textContent = "Sell Guns";
+  document.getElementById("phone-back").classList.remove("hidden");
+
+  const rows = ARMS_CATALOG.map((g) => {
+    const owned = state.armsInventory[g.id] || 0;
+    return `
+      <div class="plug-row">
+        <div class="plug-row-title">${g.name} <span class="plug-row-stock">${owned} on hand</span></div>
+        <div class="card-row">Sells for ${fmt(g.sellPrice)} each</div>
+        <div class="crypto-action-group">
+          <button class="btn sell" data-action="sell-arms" data-gun="${g.id}" data-qty="1" ${owned < 1 ? "disabled" : ""}>Sell 1 — ${fmt(g.sellPrice)}</button>
+          <button class="btn sell" data-action="sell-arms" data-gun="${g.id}" data-qty="${owned}" ${owned < 1 ? "disabled" : ""}>Sell All — ${fmt(g.sellPrice * owned)}</button>
         </div>
       </div>`;
   }).join("");
@@ -896,10 +985,14 @@ document.getElementById("phone-body").addEventListener("click", (e) => {
     else if (action === "accept-drug-request") acceptDrugRequest(actionBtn.dataset.id);
     else if (action === "counter-drug-request") counterDrugRequest(actionBtn.dataset.id, Number(actionBtn.dataset.pct), Number(actionBtn.dataset.chance));
     else if (action === "decline-drug-request") declineDrugRequest(actionBtn.dataset.id);
+    else if (action === "buy-arms") buyArmsStock(actionBtn.dataset.gun, Number(actionBtn.dataset.qty));
+    else if (action === "sell-arms") sellArmsStock(actionBtn.dataset.gun, Number(actionBtn.dataset.qty));
   } else if (contactRow) {
     const id = contactRow.dataset.contact;
     if (id === "__plug__") renderPlugPanel();
     else if (id === "__requests__") renderDrugRequestsView();
+    else if (id === "__armsdealer__") renderArmsDealerPanel();
+    else if (id === "__sellguns__") renderSellGunsPanel();
     else renderPhoneThread(id);
   }
 });

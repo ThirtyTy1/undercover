@@ -121,6 +121,36 @@ const AGENTS = [
   { id: "agent4", name: "Ghost Specialist", desc: "Elite operator, works clean and quiet.", cost: 300000, income: 20000, heat: 2, repReq: 1000 },
 ];
 
+// Gear you buy to outfit hired agents. An agent needs all three slots filled
+// (gun, clothing, car) before they're field-ready and start earning anything.
+const AGENT_GEAR = {
+  guns: [
+    { id: "ag_side", name: "Sidearm", cost: 500, bonus: 0.05 },
+    { id: "ag_smg", name: "SMG", cost: 1800, bonus: 0.12 },
+    { id: "ag_rifle", name: "Rifle", cost: 5000, bonus: 0.2 },
+  ],
+  clothing: [
+    { id: "ag_street", name: "Street Fit", cost: 300, bonus: 0.03 },
+    { id: "ag_tactical", name: "Tactical Gear", cost: 1200, bonus: 0.08 },
+    { id: "ag_disguise", name: "Clean Cover Disguise", cost: 3500, bonus: 0.15 },
+  ],
+  cars: [
+    { id: "ag_beater", name: "Beater Car", cost: 800, bonus: 0.03 },
+    { id: "ag_suv", name: "Blacked-out SUV", cost: 3000, bonus: 0.08 },
+    { id: "ag_armored", name: "Armored Sedan", cost: 9000, bonus: 0.16 },
+  ],
+};
+
+// Arms trafficking: buy stock from the Arms Dealer, resell via the phone.
+const ARMS_CATALOG = [
+  { id: "pistol", name: "Pistol", buyPrice: 300, sellPrice: 480, heat: 1 },
+  { id: "revolver", name: "Revolver", buyPrice: 450, sellPrice: 700, heat: 1 },
+  { id: "smg", name: "SMG", buyPrice: 900, sellPrice: 1450, heat: 2 },
+  { id: "shotgun", name: "Shotgun", buyPrice: 700, sellPrice: 1150, heat: 2 },
+  { id: "rifle", name: "Assault Rifle", buyPrice: 2200, sellPrice: 3600, heat: 3 },
+  { id: "sniper", name: "Sniper Rifle", buyPrice: 5000, sellPrice: 8200, heat: 4 },
+];
+
 // Simulated crypto — starting prices are realistic ballpark figures, not live market data.
 const CRYPTOS = [
   { id: "BTC", name: "Bitcoin", startPrice: 65000, volatility: 0.03, drift: 0.0012 },

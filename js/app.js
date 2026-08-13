@@ -30,13 +30,14 @@ function freshState() {
     nextBillAt: null,
     stats: { contractsCompleted: 0, contractsFailed: 0, timesBurned: 0, totalEarned: 0 },
     phone: { threads: {}, nextJobBonus: 0 },
-    agents: {},
+    hiredAgents: [],
     nextAgentPayoutAt: null,
     businesses: [],
     nextBusinessPayoutAt: null,
     drugInventory: { weed: 0, pens: 0, shrooms: 0, coke: 0 },
     drugRequests: [],
     nextDrugRequestAt: null,
+    armsInventory: { pistol: 0, revolver: 0, smg: 0, shotgun: 0, rifle: 0, sniper: 0 },
   };
 }
 
@@ -515,41 +516,79 @@ function doLayLow(id) {
 
 // ---------- Agents ----------
 
-function agentCount(id) {
-  return state.agents[id] || 0;
+function agentTypeCount(typeId) {
+  return state.hiredAgents.filter((u) => u.typeId === typeId).length;
 }
 
-function agentCost(agent) {
-  return Math.round(agent.cost * Math.pow(AGENT_COST_GROWTH, agentCount(agent.id)));
+function agentHireCost(type) {
+  return Math.round(type.cost * Math.pow(AGENT_COST_GROWTH, agentTypeCount(type.id)));
 }
 
-function hireAgent(id) {
-  const a = AGENTS.find((a) => a.id === id);
-  if (!a || state.rep < a.repReq) return;
-  const cost = Math.round(agentCost(a) * (1 - businessPerk("agentDiscount")));
+function agentIsReady(unit) {
+  return !!(unit.gunId && unit.clothingId && unit.carId);
+}
+
+function agentGearBonus(unit) {
+  let bonus = 0;
+  const gun = AGENT_GEAR.guns.find((g) => g.id === unit.gunId);
+  const cloth = AGENT_GEAR.clothing.find((g) => g.id === unit.clothingId);
+  const car = AGENT_GEAR.cars.find((g) => g.id === unit.carId);
+  if (gun) bonus += gun.bonus;
+  if (cloth) bonus += cloth.bonus;
+  if (car) bonus += car.bonus;
+  return bonus;
+}
+
+function hireAgent(typeId) {
+  const type = AGENTS.find((a) => a.id === typeId);
+  if (!type || state.rep < type.repReq) return;
+  const cost = Math.round(agentHireCost(type) * (1 - businessPerk("agentDiscount")));
   if (state.cash < cost) return;
   state.cash -= cost;
-  state.agents[id] = agentCount(id) + 1;
+  state.hiredAgents.push({
+    id: "agent_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+    typeId,
+    gunId: null,
+    clothingId: null,
+    carId: null,
+  });
   if (!state.nextAgentPayoutAt) state.nextAgentPayoutAt = Date.now() + AGENT_CYCLE_SECONDS * 1000;
-  addLog(`Hired a ${a.name} for ${fmt(cost)}`, "buy");
+  addLog(`Hired a ${type.name} for ${fmt(cost)} — needs a gun, clothes, and a car before they can work`, "buy");
   save();
   render();
 }
 
-function dismissAgent(id) {
-  const a = AGENTS.find((a) => a.id === id);
-  if (!a || agentCount(id) <= 0) return;
-  const refund = Math.round(a.cost * SELL_RATE);
-  state.agents[id] -= 1;
+function dismissAgent(instanceId) {
+  const idx = state.hiredAgents.findIndex((u) => u.id === instanceId);
+  if (idx === -1) return;
+  const unit = state.hiredAgents[idx];
+  const type = AGENTS.find((a) => a.id === unit.typeId);
+  const refund = type ? Math.round(type.cost * SELL_RATE) : 0;
+  state.hiredAgents.splice(idx, 1);
   state.cash += refund;
-  addLog(`Dismissed a ${a.name}, ${fmt(refund)} severance`, "sell");
+  addLog(`Dismissed a ${type ? type.name : "agent"}, ${fmt(refund)} severance`, "sell");
+  save();
+  render();
+}
+
+function equipAgentGear(instanceId, slot, gearId) {
+  const unit = state.hiredAgents.find((u) => u.id === instanceId);
+  if (!unit) return;
+  const catalog = slot === "gun" ? AGENT_GEAR.guns : slot === "clothing" ? AGENT_GEAR.clothing : AGENT_GEAR.cars;
+  const item = catalog.find((g) => g.id === gearId);
+  if (!item || state.cash < item.cost) return;
+  state.cash -= item.cost;
+  if (slot === "gun") unit.gunId = gearId;
+  else if (slot === "clothing") unit.clothingId = gearId;
+  else unit.carId = gearId;
+  const type = AGENTS.find((a) => a.id === unit.typeId);
+  addLog(`Equipped ${item.name} on your ${type ? type.name : "agent"}`, "buy");
   save();
   render();
 }
 
 function processAgentPayout() {
-  const total = AGENTS.reduce((sum, a) => sum + agentCount(a.id), 0);
-  if (total <= 0) {
+  if (state.hiredAgents.length === 0) {
     state.nextAgentPayoutAt = null;
     return;
   }
@@ -557,15 +596,20 @@ function processAgentPayout() {
 
   let income = 0;
   let heatGain = 0;
-  for (const a of AGENTS) {
-    const count = agentCount(a.id);
-    income += count * a.income;
-    heatGain += count * a.heat;
+  let readyCount = 0;
+  for (const unit of state.hiredAgents) {
+    if (!agentIsReady(unit)) continue;
+    const type = AGENTS.find((a) => a.id === unit.typeId);
+    if (!type) continue;
+    readyCount++;
+    income += type.income * (1 + agentGearBonus(unit));
+    heatGain += type.heat;
   }
+  income = Math.round(income);
   state.cash += income;
   state.heat = Math.min(100, state.heat + heatGain);
   state.stats.totalEarned += income;
-  addLog(`Your crew of agents delivered ${fmt(income)} (+${heatGain.toFixed(1)} heat)`, "success");
+  addLog(`Your crew delivered ${fmt(income)} (${readyCount}/${state.hiredAgents.length} field-ready, +${heatGain.toFixed(1)} heat)`, "success");
   state.nextAgentPayoutAt = Date.now() + AGENT_CYCLE_SECONDS * 1000;
 }
 
@@ -1055,6 +1099,38 @@ function declineDrugRequest(reqId) {
   save();
   render();
   if (phoneOpenContact === "__requests__") renderDrugRequestsView();
+}
+
+// ---------- Arms trafficking ----------
+
+function buyArmsStock(gunId, qty) {
+  const g = ARMS_CATALOG.find((g) => g.id === gunId);
+  if (!g) return;
+  const cost = g.buyPrice * qty;
+  if (state.cash < cost) return;
+  state.cash -= cost;
+  state.armsInventory[gunId] = (state.armsInventory[gunId] || 0) + qty;
+  addLog(`Bought ${qty} ${g.name}${qty > 1 ? "s" : ""} from the Arms Dealer for ${fmt(cost)}`, "buy");
+  save();
+  render();
+  if (phoneOpenContact === "__armsdealer__") renderArmsDealerPanel();
+}
+
+function sellArmsStock(gunId, qty) {
+  const g = ARMS_CATALOG.find((g) => g.id === gunId);
+  if (!g) return;
+  const owned = state.armsInventory[gunId] || 0;
+  qty = Math.min(qty, owned);
+  if (qty <= 0) return;
+  const proceeds = g.sellPrice * qty;
+  state.armsInventory[gunId] -= qty;
+  state.cash += proceeds;
+  state.heat = Math.min(100, state.heat + g.heat * qty);
+  state.stats.totalEarned += proceeds;
+  addLog(`Sold ${qty} ${g.name}${qty > 1 ? "s" : ""} for ${fmt(proceeds)}`, "success");
+  save();
+  render();
+  if (phoneOpenContact === "__sellguns__") renderSellGunsPanel();
 }
 
 // ---------- Game loop ----------
