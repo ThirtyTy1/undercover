@@ -17,6 +17,14 @@ function tierForRep(rep) {
   return idx;
 }
 
+const MAX_REP = 100000;
+const MAX_LEVEL = 1000;
+const REP_PER_LEVEL = MAX_REP / MAX_LEVEL; // 100 rep per level
+
+function levelForRep(rep) {
+  return Math.max(1, Math.min(MAX_LEVEL, Math.floor(rep / REP_PER_LEVEL) + 1));
+}
+
 const CONTRACTS = [
   // Tier 0 - Street Hitter
   { id: "c1", name: "Debt Collector", tier: 0, payout: 400, rep: 3, duration: 4, baseChance: 0.85, heat: 3,
@@ -44,13 +52,13 @@ const CONTRACTS = [
     minigame: "reflex", mgTitle: "One Shot", mgFlavor: "You won't get a second chance. Time it perfectly." },
   { id: "c11", name: "Foreign Diplomat", tier: 3, payout: 300000, rep: 500, duration: 90, baseChance: 0.3, heat: 50,
     minigame: "pattern", mgTitle: "Vault Access", mgFlavor: "Replicate the embassy's security sequence." },
-  { id: "c12", name: "The Kingpin", tier: 3, payout: 600000, rep: 800, duration: 120, baseChance: 0.28, heat: 55,
+  { id: "c12", name: "The Kingpin", tier: 3, unlockRep: 1350, payout: 600000, rep: 800, duration: 120, baseChance: 0.28, heat: 55,
     minigame: "takedown", mgTitle: "Final Stand", mgFlavor: "Drop every last guard between you and him." },
   // Tier 4 - Kingmaker
-  { id: "c13", name: "Silence the Board", tier: 4, payout: 800000, rep: 950, duration: 100, baseChance: 0.25, heat: 60,
+  { id: "c13", name: "Silence the Board", tier: 4, unlockRep: 2150, payout: 800000, rep: 950, duration: 100, baseChance: 0.25, heat: 60,
     minigame: "pattern", mgTitle: "Corporate Coup", mgFlavor: "Erase every trace before the board convenes." },
   // Tier 5 - Shadow Don
-  { id: "c14", name: "Take the Crown", tier: 5, payout: 1100000, rep: 1200, duration: 130, baseChance: 0.22, heat: 68,
+  { id: "c14", name: "Take the Crown", tier: 5, unlockRep: 3200, payout: 1100000, rep: 1200, duration: 130, baseChance: 0.22, heat: 68,
     minigame: "takedown", mgTitle: "Seize the Throne", mgFlavor: "Drop everyone standing between you and the top." },
 ];
 
@@ -60,7 +68,7 @@ const WEAPONS = [
   { id: "w3", name: "Combat Shotgun", cost: 2500, bonus: 0.15, repReq: 100 },
   { id: "w4", name: "Tactical SMG", cost: 6000, bonus: 0.2, repReq: 100 },
   { id: "w5", name: "Sniper Rifle", cost: 15000, bonus: 0.28, repReq: 400 },
-  { id: "w6", name: "Custom Silenced Sniper", cost: 35000, bonus: 0.35, repReq: 400 },
+  { id: "w6", name: "Custom AR-15", cost: 35000, bonus: 0.35, repReq: 400 },
   { id: "w7", name: "Twin Golden Deagles", cost: 80000, bonus: 0.45, repReq: 1000 },
 ];
 
@@ -117,6 +125,7 @@ const FLEX_ITEMS = {
 
 const SELL_RATE = 0.5; // fraction of original cost refunded when selling
 const BILL_CYCLE_SECONDS = 86400; // how often rent/property tax comes due (24h) — can also be paid early
+const MAX_RENTALS = 2; // apartments you can rent at once, on top of 1 owned house
 
 const HOUSES = {
   rent: [
@@ -314,10 +323,11 @@ const DRUG_REQUEST_QTY_RANGE = {
   coke: [1, 4],
 };
 
-const DRUG_REQUEST_EXPIRE_SECONDS = 90;
+const DRUG_REQUEST_EXPIRE_SECONDS = 180;
 const DRUG_REQUEST_MIN_GAP_SECONDS = 30;
 const DRUG_REQUEST_MAX_GAP_SECONDS = 60;
-const DRUG_REQUEST_MAX_PENDING = 3;
+const DRUG_REQUEST_BASE_PENDING = 3;
+const DRUG_REQUEST_MAX_PENDING_CAP = 8;
 
 const DRUG_COUNTER_OPTIONS = [
   { pct: 0.2, chance: 0.65, label: "Counter +20%" },
@@ -333,10 +343,11 @@ const GUN_ORDER_QTY_RANGE = {
   rifle: [1, 1],
   sniper: [1, 1],
 };
-const GUN_ORDER_EXPIRE_SECONDS = 90;
+const GUN_ORDER_EXPIRE_SECONDS = 180;
 const GUN_ORDER_MIN_GAP_SECONDS = 35;
 const GUN_ORDER_MAX_GAP_SECONDS = 70;
-const GUN_ORDER_MAX_PENDING = 3;
+const GUN_ORDER_BASE_PENDING = 3;
+const GUN_ORDER_MAX_PENDING_CAP = 8;
 const GUN_COUNTER_OPTIONS = [
   { pct: 0.2, chance: 0.65, label: "Counter +20%" },
   { pct: 0.4, chance: 0.35, label: "Push +40%" },

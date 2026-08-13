@@ -25,10 +25,8 @@ function freshState() {
     burnedUntil: 0,
     log: [],
     tickCount: 0,
-    housingType: null, // "rent" | "own" | null
-    housingId: null,
-    nextBillAt: null,
-    stats: { contractsCompleted: 0, contractsFailed: 0, timesBurned: 0, totalEarned: 0 },
+    residences: [], // [{ type: "rent" | "own", id, nextBillAt }] — up to MAX_RENTALS rentals + 1 owned
+    stats: { contractsCompleted: 0, contractsFailed: 0, timesBurned: 0, totalEarned: 0, drugSalesTotal: 0, gunSalesTotal: 0 },
     phone: { threads: {}, nextJobBonus: 0 },
     hiredAgents: [],
     nextAgentPayoutAt: null,
@@ -55,10 +53,20 @@ function load() {
     try {
       const loaded = JSON.parse(raw);
       state = Object.assign(freshState(), loaded);
+      state.stats = Object.assign(freshState().stats, loaded.stats || {});
+      // Migrate old single-residence saves (housingType/housingId/nextBillAt) into the residences array.
+      if (loaded.housingType && loaded.housingId && (!loaded.residences || loaded.residences.length === 0)) {
+        state.residences = [{ type: loaded.housingType, id: loaded.housingId, nextBillAt: loaded.nextBillAt || Date.now() + BILL_CYCLE_SECONDS * 1000 }];
+      }
+      state.rep = Math.min(MAX_REP, state.rep);
     } catch (e) {
       console.warn("save corrupted, starting fresh");
     }
   }
+}
+
+function addRep(amount) {
+  state.rep = Math.max(0, Math.min(MAX_REP, state.rep + amount));
 }
 
 function addLog(msg, type = "info") {
@@ -89,10 +97,17 @@ function weaponBonus() {
   return w ? w.bonus : 0;
 }
 
-function currentHouse() {
-  if (!state.housingType) return null;
-  const list = state.housingType === "rent" ? HOUSES.rent : HOUSES.buy;
-  return list.find((h) => h.id === state.housingId) || null;
+function houseData(residence) {
+  const list = residence.type === "rent" ? HOUSES.rent : HOUSES.buy;
+  return list.find((h) => h.id === residence.id) || null;
+}
+
+function ownedResidence() {
+  return state.residences.find((r) => r.type === "own") || null;
+}
+
+function rentedResidences() {
+  return state.residences.filter((r) => r.type === "rent");
 }
 
 function businessOwned(id) {
@@ -114,8 +129,11 @@ function businessHeatReduction() {
 }
 
 function totalHeatReduction() {
-  const house = currentHouse();
-  return sumFlexEffect("heatReduction") + (house ? house.heatReduction : 0) + businessHeatReduction();
+  const residenceReduction = state.residences.reduce((sum, r) => {
+    const h = houseData(r);
+    return sum + (h ? h.heatReduction : 0);
+  }, 0);
+  return sumFlexEffect("heatReduction") + residenceReduction + businessHeatReduction();
 }
 
 function walletValue() {
@@ -139,8 +157,11 @@ function netWorth() {
       if (item) total += item.cost;
     }
   }
-  const house = currentHouse();
-  if (house && state.housingType === "own") total += house.cost;
+  const owned = ownedResidence();
+  if (owned) {
+    const h = houseData(owned);
+    if (h) total += h.cost;
+  }
   return total;
 }
 
@@ -152,6 +173,7 @@ function takeContract(contractId) {
   const c = CONTRACTS.find((c) => c.id === contractId);
   if (!c) return;
   if (currentTierIndex() < c.tier) return;
+  if (c.unlockRep && state.rep < c.unlockRep) return;
   state.activeContract = { contractId, startedAt: Date.now(), duration: c.duration * 1000 };
   addLog(`Took contract: ${c.name}`, "info");
   save();
@@ -201,7 +223,7 @@ function resolveContract(performance) {
     const payout = Math.round(c.payout * (1 + payoutBoost) * payoutMult);
     const repGain = Math.round(c.rep * (1 + repBoost));
     state.cash += payout;
-    state.rep += repGain;
+    addRep(repGain);
     state.heat = Math.min(100, state.heat + heatGain);
     state.stats.contractsCompleted++;
     state.stats.totalEarned += payout;
@@ -320,10 +342,10 @@ function rentHouse(id) {
   const h = HOUSES.rent.find((h) => h.id === id);
   if (!h || state.rep < h.repReq) return;
   if (state.cash < h.rentCost) return;
+  if (rentedResidences().some((r) => r.id === id)) return;
+  if (rentedResidences().length >= MAX_RENTALS) return;
   state.cash -= h.rentCost;
-  state.housingType = "rent";
-  state.housingId = id;
-  state.nextBillAt = Date.now() + BILL_CYCLE_SECONDS * 1000;
+  state.residences.push({ type: "rent", id, nextBillAt: Date.now() + BILL_CYCLE_SECONDS * 1000 });
   addLog(`Moved into ${h.name} (renting) — first payment ${fmt(h.rentCost)}`, "buy");
   save();
   render();
@@ -336,82 +358,77 @@ function housePrice(h) {
 function buyHouse(id) {
   const h = HOUSES.buy.find((h) => h.id === id);
   if (!h || state.rep < h.repReq) return;
+  if (ownedResidence()) return;
   const cost = housePrice(h);
   if (state.cash < cost) return;
   state.cash -= cost;
-  state.housingType = "own";
-  state.housingId = id;
-  state.nextBillAt = Date.now() + BILL_CYCLE_SECONDS * 1000;
+  state.residences.push({ type: "own", id, nextBillAt: Date.now() + BILL_CYCLE_SECONDS * 1000 });
   addLog(`Bought ${h.name} for ${fmt(cost)}`, "buy");
   save();
   render();
 }
 
-function sellHouse() {
-  if (state.housingType !== "own") return;
-  const h = HOUSES.buy.find((h) => h.id === state.housingId);
+function sellHouse(id) {
+  const residence = state.residences.find((r) => r.type === "own" && r.id === id);
+  if (!residence) return;
+  const h = houseData(residence);
   if (!h) return;
   const refund = Math.round(h.cost * SELL_RATE);
   state.cash += refund;
   addLog(`Sold ${h.name} for ${fmt(refund)}`, "sell");
-  state.housingType = null;
-  state.housingId = null;
-  state.nextBillAt = null;
+  state.residences = state.residences.filter((r) => r !== residence);
   save();
   render();
 }
 
-function moveOut() {
-  if (state.housingType !== "rent") return;
-  const h = HOUSES.rent.find((h) => h.id === state.housingId);
+function moveOut(id) {
+  const residence = state.residences.find((r) => r.type === "rent" && r.id === id);
+  if (!residence) return;
+  const h = houseData(residence);
   addLog(`Moved out of ${h ? h.name : "your place"}`, "info");
-  state.housingType = null;
-  state.housingId = null;
-  state.nextBillAt = null;
+  state.residences = state.residences.filter((r) => r !== residence);
   save();
   render();
 }
 
-function payHouseBill() {
-  const house = currentHouse();
-  if (!house) {
-    state.housingType = null;
-    state.housingId = null;
-    state.nextBillAt = null;
+function payResidenceBill(residence) {
+  const h = houseData(residence);
+  if (!h) {
+    state.residences = state.residences.filter((r) => r !== residence);
     return;
   }
 
-  const due = state.housingType === "rent" ? house.rentCost : house.taxCost;
-  const label = state.housingType === "rent" ? "rent" : "property tax";
+  const due = residence.type === "rent" ? h.rentCost : h.taxCost;
+  const label = residence.type === "rent" ? "rent" : "property tax";
 
   if (state.cash >= due) {
     state.cash -= due;
-    addLog(`Paid ${label}: ${fmt(due)} — ${house.name}`, "bill");
+    addLog(`Paid ${label}: ${fmt(due)} — ${h.name}`, "bill");
   } else {
     state.heat = Math.min(100, state.heat + 10);
-    if (state.housingType === "rent") {
-      addLog(`Missed rent on ${house.name} — evicted! +10 heat`, "burn");
-      state.housingType = null;
-      state.housingId = null;
-      state.nextBillAt = null;
+    if (residence.type === "rent") {
+      addLog(`Missed rent on ${h.name} — evicted! +10 heat`, "burn");
+      state.residences = state.residences.filter((r) => r !== residence);
       return;
     } else {
-      addLog(`Missed property tax on ${house.name} — +10 heat`, "fail");
+      addLog(`Missed property tax on ${h.name} — +10 heat`, "fail");
     }
   }
 
-  state.nextBillAt = Date.now() + BILL_CYCLE_SECONDS * 1000;
+  residence.nextBillAt = Date.now() + BILL_CYCLE_SECONDS * 1000;
 }
 
 function processBilling() {
-  if (!state.housingType) return;
-  if (!state.nextBillAt || Date.now() < state.nextBillAt) return;
-  payHouseBill();
+  for (const residence of [...state.residences]) {
+    if (!residence.nextBillAt || Date.now() < residence.nextBillAt) continue;
+    payResidenceBill(residence);
+  }
 }
 
-function payBillEarly() {
-  if (!state.housingType) return;
-  payHouseBill();
+function payBillEarly(type, id) {
+  const residence = state.residences.find((r) => r.type === type && r.id === id);
+  if (!residence) return;
+  payResidenceBill(residence);
   save();
   render();
 }
@@ -877,6 +894,12 @@ function rouletteColor(n) {
   return ROULETTE_RED_NUMBERS.includes(n) ? "red" : "black";
 }
 
+function clearRouletteBet() {
+  if (rouletteGame && rouletteGame.phase === "spinning") return;
+  rouletteSelection = { type: null, number: null };
+  render();
+}
+
 function selectRouletteBet(type, number) {
   if (rouletteGame && rouletteGame.phase === "spinning") return;
   rouletteSelection = { type, number: number !== undefined && number !== null ? Number(number) : null };
@@ -1021,8 +1044,12 @@ function buyDrug(drugId, qty) {
   if (phoneOpenContact === "__plug__") renderPlugPanel();
 }
 
+function maxDrugPending() {
+  return Math.min(DRUG_REQUEST_MAX_PENDING_CAP, DRUG_REQUEST_BASE_PENDING + currentTierIndex());
+}
+
 function generateDrugRequest() {
-  if (state.drugRequests.length >= DRUG_REQUEST_MAX_PENDING) return;
+  if (state.drugRequests.length >= maxDrugPending()) return;
   const d = DRUGS[Math.floor(Math.random() * DRUGS.length)];
   const [lo, hi] = DRUG_REQUEST_QTY_RANGE[d.id];
   const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -1060,6 +1087,7 @@ function fulfillDrugSale(req, price) {
   state.cash += price;
   state.heat = Math.min(100, state.heat + d.heat * req.qty);
   state.stats.totalEarned += price;
+  state.stats.drugSalesTotal += price;
   return d;
 }
 
@@ -1118,8 +1146,12 @@ function buyArmsStock(gunId, qty) {
   if (phoneOpenContact === "__armsdealer__") renderArmsDealerPanel();
 }
 
+function maxGunPending() {
+  return Math.min(GUN_ORDER_MAX_PENDING_CAP, GUN_ORDER_BASE_PENDING + currentTierIndex());
+}
+
 function generateGunOrder() {
-  if (state.gunOrders.length >= GUN_ORDER_MAX_PENDING) return;
+  if (state.gunOrders.length >= maxGunPending()) return;
   const g = ARMS_CATALOG[Math.floor(Math.random() * ARMS_CATALOG.length)];
   const [lo, hi] = GUN_ORDER_QTY_RANGE[g.id];
   const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -1157,6 +1189,7 @@ function fulfillGunOrder(order, price) {
   state.cash += price;
   state.heat = Math.min(100, state.heat + g.heat * order.qty);
   state.stats.totalEarned += price;
+  state.stats.gunSalesTotal += price;
   return g;
 }
 

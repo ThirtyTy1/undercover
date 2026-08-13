@@ -113,7 +113,8 @@ function contractsTabHTML() {
   }
 
   const cards = CONTRACTS.map((c) => {
-    const locked = c.tier > tierIdx;
+    const repReq = Math.max(TIERS[c.tier].repReq, c.unlockRep || 0);
+    const locked = c.tier > tierIdx || state.rep < repReq;
     const disabled = locked || !!state.activeContract || burned;
     const chance = Math.round(
       Math.max(0.05, Math.min(0.97, c.baseChance + weaponBonus() - Math.min(state.heat / 250, 0.3))) * 100
@@ -127,7 +128,7 @@ function contractsTabHTML() {
         <div class="card-row">Odds: ${chance}% · Heat +${c.heat}</div>
         ${
           locked
-            ? `<div class="locked-tag">Requires ${TIERS[c.tier].name} (${TIERS[c.tier].repReq} rep)</div>`
+            ? `<div class="locked-tag">Requires ${repReq} rep</div>`
             : `<button class="btn" data-action="take-contract" data-id="${c.id}" ${disabled ? "disabled" : ""}>Take Contract</button>`
         }
       </div>`;
@@ -190,13 +191,24 @@ function flexCategoryHTML(catName, items) {
   return `<h3 class="cat-heading">${catName}</h3><div class="grid">${cards}</div>`;
 }
 
+let flexView = "cars";
+const FLEX_CATEGORIES = [
+  { key: "cars", label: "Cars", items: () => FLEX_ITEMS.cars },
+  { key: "watches", label: "Watches", items: () => FLEX_ITEMS.watches },
+  { key: "necklaces", label: "Necklaces", items: () => FLEX_ITEMS.necklaces },
+  { key: "clothes", label: "Clothes", items: () => FLEX_ITEMS.clothes },
+];
+
 function flexTabHTML() {
-  return (
-    flexCategoryHTML("Cars", FLEX_ITEMS.cars) +
-    flexCategoryHTML("Watches", FLEX_ITEMS.watches) +
-    flexCategoryHTML("Necklaces", FLEX_ITEMS.necklaces) +
-    flexCategoryHTML("Clothes", FLEX_ITEMS.clothes)
-  );
+  const nav = `
+    <div class="casino-nav">
+      ${FLEX_CATEGORIES.map((cat) => {
+        const owned = cat.items().filter((i) => state.ownedFlex.includes(i.id)).length;
+        return `<button class="btn ${flexView === cat.key ? "equipped" : ""}" data-action="flex-view" data-view="${cat.key}">${cat.label} (${owned}/${cat.items().length})</button>`;
+      }).join("")}
+    </div>`;
+  const active = FLEX_CATEGORIES.find((c) => c.key === flexView) || FLEX_CATEGORIES[0];
+  return nav + flexCategoryHTML(active.label, active.items());
 }
 
 function coinSparkline(history) {
@@ -263,10 +275,13 @@ function bankTabHTML() {
       <div class="atm-keypad">
         <button class="btn" data-action="deposit-bank" data-amount="1000">Deposit ${fmt(1000)}</button>
         <button class="btn" data-action="deposit-bank" data-amount="10000">Deposit ${fmt(10000)}</button>
-        <button class="btn" data-action="deposit-bank-all">Deposit All Cash</button>
         <button class="btn sell" data-action="withdraw-bank" data-amount="1000">Withdraw ${fmt(1000)}</button>
         <button class="btn sell" data-action="withdraw-bank" data-amount="10000">Withdraw ${fmt(10000)}</button>
-        <button class="btn sell" data-action="withdraw-bank-all">Withdraw All</button>
+      </div>
+      <div class="atm-custom">
+        <input type="number" id="bank-custom-amount" class="atm-input" placeholder="Custom amount" min="1" />
+        <button class="btn" data-action="deposit-bank-custom">Deposit</button>
+        <button class="btn sell" data-action="withdraw-bank-custom">Withdraw</button>
       </div>
       <div class="hint">ATM withdrawals take a ${Math.round(ATM_FEE_RATE * 100)}% fee.</div>
     </div>`;
@@ -300,6 +315,7 @@ function blackjackHTML() {
           <button class="btn" data-action="bj-start" data-amount="500" ${state.cash < 500 ? "disabled" : ""}>Bet ${fmt(500)}</button>
           <button class="btn" data-action="bj-start" data-amount="2000" ${state.cash < 2000 ? "disabled" : ""}>Bet ${fmt(2000)}</button>
           <button class="btn" data-action="bj-start" data-amount="10000" ${state.cash < 10000 ? "disabled" : ""}>Bet ${fmt(10000)}</button>
+          <button class="btn" data-action="bj-start" data-amount="50000" ${state.cash < 50000 ? "disabled" : ""}>Bet ${fmt(50000)}</button>
         </div>
       </div>`;
   }
@@ -369,18 +385,25 @@ function slotsHTML() {
     </div>`;
 }
 
+function rouletteNumberCell(n) {
+  const color = rouletteColor(n);
+  const selected = rouletteSelection.type === "straight" && rouletteSelection.number === n;
+  return `<div class="roulette-cell ${color} ${selected ? "selected" : ""}" data-action="roulette-select" data-type="straight" data-number="${n}">${n}${selected ? '<span class="roulette-chip"></span>' : ""}</div>`;
+}
+
 function rouletteHTML() {
   const spinning = rouletteGame && rouletteGame.phase === "spinning";
   const resultColorCls = rouletteGame && !spinning ? rouletteGame.resultColor : "";
   const resultNumberText = spinning ? "?" : rouletteGame ? rouletteGame.resultNumber : "–";
 
-  const numberCells = Array.from({ length: 37 }, (_, n) => n)
-    .map((n) => {
-      const color = rouletteColor(n);
-      const selected = rouletteSelection.type === "straight" && rouletteSelection.number === n;
-      return `<div class="roulette-cell ${color} ${selected ? "selected" : ""}" data-action="roulette-select" data-type="straight" data-number="${n}">${n}</div>`;
-    })
-    .join("");
+  const rows = [3, 2, 1].map((rowOffset) => {
+    const cells = Array.from({ length: 12 }, (_, i) => rouletteNumberCell(i * 3 + rowOffset)).join("");
+    return `<div class="roulette-row">${cells}</div>`;
+  }).join("");
+
+  const zeroCell = `<div class="roulette-cell green zero" data-action="roulette-select" data-type="straight" data-number="0">0${
+    rouletteSelection.type === "straight" && rouletteSelection.number === 0 ? '<span class="roulette-chip"></span>' : ""
+  }</div>`;
 
   const outsideBtns = ROULETTE_OUTSIDE_BETS.map((b) => {
     const selected = rouletteSelection.type === b.type;
@@ -398,13 +421,17 @@ function rouletteHTML() {
     <div class="casino-table">
       <div class="roulette-result ${spinning ? "spinning" : resultColorCls}">${resultNumberText}</div>
       ${rouletteGame && rouletteGame.resultText && !spinning ? `<div class="mg-result-text ${resultCls}">${rouletteGame.resultText}</div>` : ""}
-      <div class="roulette-grid">${numberCells}</div>
+      <div class="roulette-table-felt">
+        ${zeroCell}
+        <div class="roulette-rows">${rows}</div>
+      </div>
       <div class="crypto-action-group">${outsideBtns}</div>
-      <div class="card-row">Bet: ${betLabel || "None selected — tap a number or an outside bet"}</div>
+      <div class="card-row">Bet: ${betLabel || "None selected — tap a number or an outside bet"} ${betLabel ? `<button class="btn sell" data-action="roulette-clear" style="margin-left:8px">Clear Bet</button>` : ""}</div>
       <div class="crypto-action-group">
         <button class="btn" data-action="roulette-spin" data-amount="100" ${!rouletteSelection.type || spinning || state.cash < 100 ? "disabled" : ""}>Spin ${fmt(100)}</button>
         <button class="btn" data-action="roulette-spin" data-amount="500" ${!rouletteSelection.type || spinning || state.cash < 500 ? "disabled" : ""}>Spin ${fmt(500)}</button>
         <button class="btn" data-action="roulette-spin" data-amount="2000" ${!rouletteSelection.type || spinning || state.cash < 2000 ? "disabled" : ""}>Spin ${fmt(2000)}</button>
+        <button class="btn" data-action="roulette-spin" data-amount="5000" ${!rouletteSelection.type || spinning || state.cash < 5000 ? "disabled" : ""}>Spin ${fmt(5000)}</button>
       </div>
       <div class="hint">Straight number pays 35:1. Dozens pay 2:1. Red/Black/Odd/Even/1-18/19-36 pay 1:1.</div>
     </div>`;
@@ -421,35 +448,43 @@ function formatDuration(totalSeconds) {
 }
 
 function housingTabHTML() {
-  const house = currentHouse();
+  const rentals = rentedResidences();
+  const owned = ownedResidence();
   let currentHTML = "";
 
-  if (house) {
-    const due = state.housingType === "rent" ? house.rentCost : house.taxCost;
-    const label = state.housingType === "rent" ? "Rent" : "Property tax";
-    const remain = state.nextBillAt ? Math.max(0, state.nextBillAt - Date.now()) / 1000 : 0;
-    currentHTML = `
-      <div class="active-contract">
-        <div class="active-title">Current residence: ${house.name} (${state.housingType === "rent" ? "renting" : "owned"})</div>
-        <div class="card-row">${label} due in ${formatDuration(remain)} — ${fmt(due)}</div>
-        <div class="card-row">-${Math.round(house.heatReduction * 100)}% heat gain</div>
-        <div class="crypto-action-group">
-          <button class="btn" data-action="pay-bill-early" ${state.cash < due ? "disabled" : ""}>Pay ${label} Now — ${fmt(due)}</button>
-          ${
-            state.housingType === "own"
-              ? `<button class="btn sell" data-action="sell-house">Sell house — ${fmt(Math.round(house.cost * SELL_RATE))}</button>`
-              : `<button class="btn sell" data-action="move-out">Move out</button>`
-          }
-        </div>
-      </div>`;
+  if (rentals.length || owned) {
+    const rows = [...rentals, ...(owned ? [owned] : [])].map((residence) => {
+      const h = houseData(residence);
+      if (!h) return "";
+      const due = residence.type === "rent" ? h.rentCost : h.taxCost;
+      const label = residence.type === "rent" ? "Rent" : "Property tax";
+      const remain = residence.nextBillAt ? Math.max(0, residence.nextBillAt - Date.now()) / 1000 : 0;
+      return `
+        <div class="active-contract">
+          <div class="active-title">${h.name} (${residence.type === "rent" ? "renting" : "owned"})</div>
+          <div class="card-row">${label} due in ${formatDuration(remain)} — ${fmt(due)}</div>
+          <div class="card-row">-${Math.round(h.heatReduction * 100)}% heat gain</div>
+          <div class="crypto-action-group">
+            <button class="btn" data-action="pay-bill-early" data-type="${residence.type}" data-id="${residence.id}" ${state.cash < due ? "disabled" : ""}>Pay ${label} Now — ${fmt(due)}</button>
+            ${
+              residence.type === "own"
+                ? `<button class="btn sell" data-action="sell-house" data-id="${residence.id}">Sell house — ${fmt(Math.round(h.cost * SELL_RATE))}</button>`
+                : `<button class="btn sell" data-action="move-out" data-id="${residence.id}">Move out</button>`
+            }
+          </div>
+        </div>`;
+    }).join("");
+    currentHTML = rows;
   } else {
     currentHTML = `<div class="active-contract">No residence — heat decays slower once you have a place to lay low.</div>`;
   }
 
+  const rentalCount = rentals.length;
   const rentCards = HOUSES.rent
     .map((h) => {
       const locked = state.rep < h.repReq;
-      const active = state.housingType === "rent" && state.housingId === h.id;
+      const active = rentals.some((r) => r.id === h.id);
+      const full = !active && rentalCount >= MAX_RENTALS;
       return `
         <div class="card ${locked ? "locked" : ""} ${active ? "owned" : ""}">
           <div class="art-box">${itemArtSVG(h.id)}</div>
@@ -460,6 +495,8 @@ function housingTabHTML() {
               ? `<button class="btn equipped" disabled>Renting</button>`
               : locked
               ? `<div class="locked-tag">Requires ${h.repReq} rep</div>`
+              : full
+              ? `<div class="locked-tag">Max ${MAX_RENTALS} rentals at once</div>`
               : `<button class="btn" data-action="rent-house" data-id="${h.id}" ${state.cash < h.rentCost ? "disabled" : ""}>Rent — first payment ${fmt(h.rentCost)}</button>`
           }
         </div>`;
@@ -469,17 +506,20 @@ function housingTabHTML() {
   const buyCards = HOUSES.buy
     .map((h) => {
       const locked = state.rep < h.repReq;
-      const owned = state.housingType === "own" && state.housingId === h.id;
+      const isOwned = owned && owned.id === h.id;
+      const full = !isOwned && !!owned;
       return `
-        <div class="card ${locked ? "locked" : ""} ${owned ? "owned" : ""}">
+        <div class="card ${locked ? "locked" : ""} ${isOwned ? "owned" : ""}">
           <div class="art-box">${itemArtSVG(h.id)}</div>
           <div class="card-title">${h.name}</div>
           <div class="card-row">Tax: ${fmt(h.taxCost)} / cycle · -${Math.round(h.heatReduction * 100)}% heat gain</div>
           ${
-            owned
+            isOwned
               ? `<button class="btn equipped" disabled>Owned</button>`
               : locked
               ? `<div class="locked-tag">Requires ${h.repReq} rep</div>`
+              : full
+              ? `<div class="locked-tag">Sell your house to buy another</div>`
               : `<button class="btn" data-action="buy-house" data-id="${h.id}" ${state.cash < housePrice(h) ? "disabled" : ""}>Buy — ${fmt(housePrice(h))}</button>`
           }
         </div>`;
@@ -487,15 +527,17 @@ function housingTabHTML() {
     .join("");
 
   return `${currentHTML}
-    <h3 class="cat-heading">Rentals</h3><div class="grid">${rentCards}</div>
-    <h3 class="cat-heading">Own</h3><div class="grid">${buyCards}</div>`;
+    <h3 class="cat-heading">Rentals (${rentalCount}/${MAX_RENTALS})</h3><div class="grid">${rentCards}</div>
+    <h3 class="cat-heading">Own (${owned ? 1 : 0}/1)</h3><div class="grid">${buyCards}</div>`;
 }
 
 function profileTabHTML() {
   const tierIdx = currentTierIndex();
   const tier = TIERS[tierIdx];
-  const level = Math.floor(state.rep / 50) + 1;
-  const house = currentHouse();
+  const level = levelForRep(state.rep);
+  const levelPct = Math.min(100, ((state.rep % REP_PER_LEVEL) / REP_PER_LEVEL) * 100);
+  const rentals = rentedResidences();
+  const owned = ownedResidence();
   const equippedW = WEAPONS.find((w) => w.id === state.equippedWeapon);
 
   const ownedWeaponsHTML = state.ownedWeapons
@@ -516,23 +558,50 @@ function profileTabHTML() {
     })
     .join("");
 
+  const residenceNames = [...rentals, ...(owned ? [owned] : [])]
+    .map((r) => {
+      const h = houseData(r);
+      return h ? `${h.name} (${r.type === "rent" ? "renting" : "owned"})` : "";
+    })
+    .filter(Boolean)
+    .join(" · ");
+
   return `
-    <div class="profile-header">
-      <div class="profile-stat"><span class="stat-label">Level</span><span class="stat-value">${level}</span></div>
-      <div class="profile-stat"><span class="stat-label">Tier</span><span class="stat-value">${tier.name}</span></div>
-      <div class="profile-stat"><span class="stat-label">Reputation</span><span class="stat-value">${state.rep}</span></div>
-      <div class="profile-stat"><span class="stat-label">Net Worth</span><span class="stat-value cash">${fmt(netWorth())}</span></div>
+    <div class="vault-hero">
+      <div class="vault-hero-main">
+        <div class="vault-level-ring">
+          <span class="vault-level-num">${level}</span>
+          <span class="vault-level-label">LVL</span>
+        </div>
+        <div class="vault-hero-info">
+          <div class="vault-tier-name">${tier.name}</div>
+          <div class="vault-rep-row">
+            <div class="rep-bar"><div class="rep-fill" style="width:${levelPct}%"></div></div>
+            <span class="vault-rep-num">${state.rep.toLocaleString()} / ${MAX_REP.toLocaleString()} rep</span>
+          </div>
+        </div>
+      </div>
+      <div class="vault-networth">
+        <span class="stat-label">Net Worth</span>
+        <span class="stat-value cash vault-networth-num">${fmt(netWorth())}</span>
+      </div>
     </div>
 
-    <div class="profile-header">
-      <div class="profile-stat"><span class="stat-label">Contracts Done</span><span class="stat-value">${state.stats.contractsCompleted}</span></div>
-      <div class="profile-stat"><span class="stat-label">Contracts Failed</span><span class="stat-value">${state.stats.contractsFailed}</span></div>
-      <div class="profile-stat"><span class="stat-label">Times Burned</span><span class="stat-value">${state.stats.timesBurned}</span></div>
-      <div class="profile-stat"><span class="stat-label">Total Earned</span><span class="stat-value cash">${fmt(state.stats.totalEarned)}</span></div>
+    <div class="vault-stat-grid">
+      <div class="vault-stat-card"><span class="stat-label">Contracts Done</span><span class="stat-value">${state.stats.contractsCompleted}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Contracts Failed</span><span class="stat-value">${state.stats.contractsFailed}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Times Burned</span><span class="stat-value">${state.stats.timesBurned}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Total Earned</span><span class="stat-value cash">${fmt(state.stats.totalEarned)}</span></div>
+    </div>
+
+    <h3 class="cat-heading">Sales</h3>
+    <div class="vault-stat-grid">
+      <div class="vault-stat-card"><span class="stat-label">Drug Sales</span><span class="stat-value cash">${fmt(state.stats.drugSalesTotal)}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Gun Sales</span><span class="stat-value cash">${fmt(state.stats.gunSalesTotal)}</span></div>
     </div>
 
     <h3 class="cat-heading">Residence</h3>
-    <div class="card-row">${house ? `${house.name} (${state.housingType === "rent" ? "renting" : "owned"})` : "No residence"}</div>
+    <div class="card-row">${residenceNames || "No residence"}</div>
 
     <h3 class="cat-heading">Equipped Weapon</h3>
     <div class="card-row">${equippedW ? equippedW.name : "None"}</div>
@@ -716,15 +785,26 @@ function bindTabEvents() {
         const input = document.getElementById("save-code-input");
         importSaveCode(input.value);
       }
-      else if (action === "pay-bill-early") payBillEarly();
+      else if (action === "pay-bill-early") payBillEarly(btn.dataset.type, id);
       else if (action === "rent-house") rentHouse(id);
       else if (action === "buy-house") buyHouse(id);
-      else if (action === "sell-house") sellHouse();
-      else if (action === "move-out") moveOut();
+      else if (action === "sell-house") sellHouse(id);
+      else if (action === "move-out") moveOut(id);
       else if (action === "deposit-bank") depositBank(Number(btn.dataset.amount));
-      else if (action === "deposit-bank-all") depositBank(state.cash);
       else if (action === "withdraw-bank") withdrawBank(Number(btn.dataset.amount));
-      else if (action === "withdraw-bank-all") withdrawBank(state.bankBalance);
+      else if (action === "deposit-bank-custom") {
+        const input = document.getElementById("bank-custom-amount");
+        depositBank(Number(input.value));
+        input.value = "";
+      } else if (action === "withdraw-bank-custom") {
+        const input = document.getElementById("bank-custom-amount");
+        withdrawBank(Number(input.value));
+        input.value = "";
+      }
+      else if (action === "flex-view") {
+        flexView = btn.dataset.view;
+        render();
+      }
       else if (action === "casino-view") {
         casinoView = btn.dataset.view;
         render();
@@ -735,6 +815,7 @@ function bindTabEvents() {
       else if (action === "bj-new") bjNewRound();
       else if (action === "slot-spin") spinSlots(Number(btn.dataset.amount));
       else if (action === "roulette-select") selectRouletteBet(btn.dataset.type, btn.dataset.number);
+      else if (action === "roulette-clear") clearRouletteBet();
       else if (action === "roulette-spin") spinRoulette(Number(btn.dataset.amount));
     });
   });
