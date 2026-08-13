@@ -193,11 +193,10 @@ const AGENT_GEAR = {
 // Arms trafficking: buy stock from the Arms Dealer, resell via the phone.
 const ARMS_CATALOG = [
   { id: "pistol", name: "Pistol", buyPrice: 300, sellPrice: 480, heat: 1 },
-  { id: "revolver", name: "Revolver", buyPrice: 450, sellPrice: 700, heat: 1 },
   { id: "smg", name: "SMG", buyPrice: 900, sellPrice: 1450, heat: 2 },
   { id: "shotgun", name: "Shotgun", buyPrice: 700, sellPrice: 1150, heat: 2 },
   { id: "rifle", name: "Assault Rifle", buyPrice: 2200, sellPrice: 3600, heat: 3 },
-  { id: "sniper", name: "Sniper Rifle", buyPrice: 5000, sellPrice: 8200, heat: 4 },
+  { id: "sniper", name: "Heavy SMG", buyPrice: 5000, sellPrice: 8200, heat: 4 },
 ];
 
 // Simulated crypto — starting prices are realistic ballpark figures, not live market data.
@@ -343,11 +342,10 @@ const DRUG_COUNTER_OPTIONS = [
 // Gun orders: buyers text in wanting specific stock from your arms inventory.
 const GUN_ORDER_QTY_RANGE = {
   pistol: [1, 3],
-  revolver: [1, 2],
   smg: [1, 2],
   shotgun: [1, 2],
   rifle: [1, 1],
-  sniper: [1, 1],
+  sniper: [1, 2],
 };
 const GUN_ORDER_EXPIRE_SECONDS = 180;
 const GUN_ORDER_MIN_GAP_SECONDS = 35;
@@ -355,6 +353,31 @@ const GUN_ORDER_MAX_GAP_SECONDS = 70;
 const GUN_ORDER_BASE_PENDING = 3;
 const GUN_ORDER_MAX_PENDING_CAP = 8;
 const GUN_COUNTER_OPTIONS = [
+  { pct: 0.2, chance: 0.65, label: "Counter +20%" },
+  { pct: 0.4, chance: 0.35, label: "Push +40%" },
+];
+
+// Watch dealing: buy stock from a supplier, sell to buyers who text in — same loop as drugs/guns.
+const WATCH_SUPPLIER_CATALOG = [
+  { id: "watchcheap", name: "Knockoff Watch", buyPrice: 80, sellPrice: 140, heat: 1 },
+  { id: "watchsteel", name: "Steel Chronograph", buyPrice: 300, sellPrice: 520, heat: 1 },
+  { id: "watchgold", name: "Gold Diver", buyPrice: 900, sellPrice: 1600, heat: 2 },
+  { id: "watchdiamond", name: "Diamond Bezel", buyPrice: 2500, sellPrice: 4400, heat: 2 },
+  { id: "watchiced", name: "Iced-Out Piece", buyPrice: 6000, sellPrice: 10500, heat: 3 },
+];
+const WATCH_ORDER_QTY_RANGE = {
+  watchcheap: [1, 4],
+  watchsteel: [1, 3],
+  watchgold: [1, 2],
+  watchdiamond: [1, 2],
+  watchiced: [1, 1],
+};
+const WATCH_ORDER_EXPIRE_SECONDS = 180;
+const WATCH_ORDER_MIN_GAP_SECONDS = 32;
+const WATCH_ORDER_MAX_GAP_SECONDS = 65;
+const WATCH_ORDER_BASE_PENDING = 3;
+const WATCH_ORDER_MAX_PENDING_CAP = 8;
+const WATCH_COUNTER_OPTIONS = [
   { pct: 0.2, chance: 0.65, label: "Counter +20%" },
   { pct: 0.4, chance: 0.35, label: "Push +40%" },
 ];

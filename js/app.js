@@ -26,7 +26,7 @@ function freshState() {
     log: [],
     tickCount: 0,
     residences: [], // [{ type: "rent" | "own", id, nextBillAt }] — up to MAX_RENTALS rentals + 1 owned
-    stats: { contractsCompleted: 0, contractsFailed: 0, timesBurned: 0, totalEarned: 0, drugSalesTotal: 0, gunSalesTotal: 0 },
+    stats: { contractsCompleted: 0, contractsFailed: 0, timesBurned: 0, totalEarned: 0, drugSalesTotal: 0, gunSalesTotal: 0, watchSalesTotal: 0 },
     phone: { threads: {}, nextJobBonus: 0 },
     hiredAgents: [],
     nextAgentPayoutAt: null,
@@ -35,9 +35,12 @@ function freshState() {
     drugInventory: { weed: 0, pens: 0, shrooms: 0, coke: 0 },
     drugRequests: [],
     nextDrugRequestAt: null,
-    armsInventory: { pistol: 0, revolver: 0, smg: 0, shotgun: 0, rifle: 0, sniper: 0 },
+    armsInventory: { pistol: 0, smg: 0, shotgun: 0, rifle: 0, sniper: 0 },
     gunOrders: [],
     nextGunOrderAt: null,
+    watchInventory: { watchcheap: 0, watchsteel: 0, watchgold: 0, watchdiamond: 0, watchiced: 0 },
+    watchOrders: [],
+    nextWatchOrderAt: null,
   };
 }
 
@@ -59,6 +62,8 @@ function load() {
         state.residences = [{ type: loaded.housingType, id: loaded.housingId, nextBillAt: loaded.nextBillAt || Date.now() + BILL_CYCLE_SECONDS * 1000 }];
       }
       state.rep = Math.min(MAX_REP, state.rep);
+      // Drop stale orders/stock referencing items removed from a catalog (e.g. Revolver).
+      state.gunOrders = state.gunOrders.filter((o) => ARMS_CATALOG.some((g) => g.id === o.gunId));
     } catch (e) {
       console.warn("save corrupted, starting fresh");
     }
@@ -1233,6 +1238,108 @@ function declineGunOrder(orderId) {
   if (phoneOpenContact === "__gunorders__") renderGunOrdersView();
 }
 
+// ---------- Watch dealing ----------
+
+function buyWatchStock(watchId, qty) {
+  const w = WATCH_SUPPLIER_CATALOG.find((w) => w.id === watchId);
+  if (!w) return;
+  const cost = w.buyPrice * qty;
+  if (state.cash < cost) return;
+  state.cash -= cost;
+  state.watchInventory[watchId] = (state.watchInventory[watchId] || 0) + qty;
+  addLog(`Bought ${qty} ${w.name}${qty > 1 ? "s" : ""} from the Watch Supplier for ${fmt(cost)}`, "buy");
+  save();
+  render();
+  if (phoneOpenContact === "__watchsupplier__") renderWatchSupplierPanel();
+}
+
+function maxWatchPending() {
+  return Math.min(WATCH_ORDER_MAX_PENDING_CAP, WATCH_ORDER_BASE_PENDING + currentTierIndex());
+}
+
+function generateWatchOrder() {
+  if (state.watchOrders.length >= maxWatchPending()) return;
+  const w = WATCH_SUPPLIER_CATALOG[Math.floor(Math.random() * WATCH_SUPPLIER_CATALOG.length)];
+  const [lo, hi] = WATCH_ORDER_QTY_RANGE[w.id];
+  const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
+  const priceFactor = 0.7 + Math.random() * 0.25;
+  const offerPrice = Math.round(w.sellPrice * qty * priceFactor);
+  state.watchOrders.push({
+    id: "worder" + Date.now() + Math.floor(Math.random() * 1000),
+    watchId: w.id,
+    qty,
+    offerPrice,
+    expiresAt: Date.now() + WATCH_ORDER_EXPIRE_SECONDS * 1000,
+  });
+  addLog(`New order: buyer wants ${qty} ${w.name}${qty > 1 ? "s" : ""}`, "info");
+}
+
+function processWatchOrders() {
+  const before = state.watchOrders.length;
+  state.watchOrders = state.watchOrders.filter((o) => Date.now() < o.expiresAt);
+  if (state.watchOrders.length < before && phoneOpenContact === "__watchorders__") renderWatchOrdersView();
+
+  if (!state.nextWatchOrderAt) {
+    state.nextWatchOrderAt = Date.now() + (WATCH_ORDER_MIN_GAP_SECONDS + Math.random() * (WATCH_ORDER_MAX_GAP_SECONDS - WATCH_ORDER_MIN_GAP_SECONDS)) * 1000;
+    return;
+  }
+  if (Date.now() >= state.nextWatchOrderAt) {
+    generateWatchOrder();
+    state.nextWatchOrderAt = Date.now() + (WATCH_ORDER_MIN_GAP_SECONDS + Math.random() * (WATCH_ORDER_MAX_GAP_SECONDS - WATCH_ORDER_MIN_GAP_SECONDS)) * 1000;
+    if (phoneOpenContact === "__watchorders__") renderWatchOrdersView();
+  }
+}
+
+function fulfillWatchSale(order, price) {
+  const w = WATCH_SUPPLIER_CATALOG.find((w) => w.id === order.watchId);
+  state.watchInventory[order.watchId] -= order.qty;
+  state.cash += price;
+  state.heat = Math.min(100, state.heat + w.heat * order.qty);
+  state.stats.totalEarned += price;
+  state.stats.watchSalesTotal += price;
+  return w;
+}
+
+function acceptWatchOrder(orderId) {
+  const order = state.watchOrders.find((o) => o.id === orderId);
+  if (!order) return;
+  if ((state.watchInventory[order.watchId] || 0) < order.qty) return;
+  const w = fulfillWatchSale(order, order.offerPrice);
+  state.watchOrders = state.watchOrders.filter((o) => o.id !== orderId);
+  addLog(`Sold ${order.qty} ${w.name}${order.qty > 1 ? "s" : ""} for ${fmt(order.offerPrice)}`, "success");
+  save();
+  render();
+  if (phoneOpenContact === "__watchorders__") renderWatchOrdersView();
+}
+
+function counterWatchOrder(orderId, pct, chance) {
+  const order = state.watchOrders.find((o) => o.id === orderId);
+  if (!order) return;
+  if ((state.watchInventory[order.watchId] || 0) < order.qty) return;
+  const counterPrice = Math.round(order.offerPrice * (1 + pct));
+  const success = Math.random() < chance;
+  state.watchOrders = state.watchOrders.filter((o) => o.id !== orderId);
+
+  if (success) {
+    const w = fulfillWatchSale(order, counterPrice);
+    addLog(`Countered and closed: ${order.qty} ${w.name}${order.qty > 1 ? "s" : ""} for ${fmt(counterPrice)}`, "success");
+  } else {
+    const w = WATCH_SUPPLIER_CATALOG.find((w) => w.id === order.watchId);
+    addLog(`Buyer walked on the counter for ${w.name}. No deal.`, "fail");
+  }
+  save();
+  render();
+  if (phoneOpenContact === "__watchorders__") renderWatchOrdersView();
+}
+
+function declineWatchOrder(orderId) {
+  state.watchOrders = state.watchOrders.filter((o) => o.id !== orderId);
+  addLog("Declined a watch order.", "info");
+  save();
+  render();
+  if (phoneOpenContact === "__watchorders__") renderWatchOrdersView();
+}
+
 // ---------- Game loop ----------
 
 function gameTick() {
@@ -1251,6 +1358,7 @@ function gameTick() {
   processBusinessPayout();
   processDrugRequests();
   processGunOrders();
+  processWatchOrders();
 
   // mark active contract ready once its timer completes (resolution now waits on the mini-game)
   if (state.activeContract && !state.activeContract.ready) {

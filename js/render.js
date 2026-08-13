@@ -36,6 +36,7 @@ function render() {
   renderBurnOverlay();
   if (phoneOpenContact === "__requests__") renderDrugRequestsView();
   if (phoneOpenContact === "__gunorders__") renderGunOrdersView();
+  if (phoneOpenContact === "__watchorders__") renderWatchOrdersView();
 }
 
 function renderStats() {
@@ -621,6 +622,7 @@ function profileTabHTML() {
     <div class="vault-stat-grid">
       <div class="vault-stat-card"><span class="stat-label">Drug Sales</span><span class="stat-value cash">${fmt(state.stats.drugSalesTotal)}</span></div>
       <div class="vault-stat-card"><span class="stat-label">Gun Sales</span><span class="stat-value cash">${fmt(state.stats.gunSalesTotal)}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Watch Sales</span><span class="stat-value cash">${fmt(state.stats.watchSalesTotal)}</span></div>
     </div>
 
     <h3 class="cat-heading">Residence</h3>
@@ -640,6 +642,9 @@ function profileTabHTML() {
 
     <h3 class="cat-heading">Arms on Hand</h3>
     <div class="card-row">${ARMS_CATALOG.map((g) => `${g.name}: ${state.armsInventory[g.id] || 0}`).join(" · ")}</div>
+
+    <h3 class="cat-heading">Watches on Hand</h3>
+    <div class="card-row">${WATCH_SUPPLIER_CATALOG.map((w) => `${w.name}: ${state.watchInventory[w.id] || 0}`).join(" · ")}</div>
 
     <h3 class="cat-heading">Case File Backup</h3>
     <div class="card-row">This game saves only to this browser. Export your case file to carry it to another device or browser, or import one to restore it.</div>
@@ -916,6 +921,7 @@ function renderPhoneContacts() {
 
   const pendingCount = state.drugRequests.length;
   const pendingGunOrders = state.gunOrders.length;
+  const pendingWatchOrders = state.watchOrders.length;
   const specialRows = `
     <div class="phone-contact" data-contact="__requests__">
       <div class="phone-contact-name">Customers ${pendingCount > 0 ? `<span class="phone-badge">${pendingCount}</span>` : ""}</div>
@@ -932,6 +938,14 @@ function renderPhoneContacts() {
     <div class="phone-contact" data-contact="__gunorders__">
       <div class="phone-contact-name">Gun Orders ${pendingGunOrders > 0 ? `<span class="phone-badge">${pendingGunOrders}</span>` : ""}</div>
       <div class="phone-contact-preview">${pendingGunOrders > 0 ? `${pendingGunOrders} order${pendingGunOrders > 1 ? "s" : ""} waiting on you` : "No orders right now"}</div>
+    </div>
+    <div class="phone-contact" data-contact="__watchsupplier__">
+      <div class="phone-contact-name">Watch Supplier <span class="phone-contact-role">Supplier</span></div>
+      <div class="phone-contact-preview">Timepieces, wholesale</div>
+    </div>
+    <div class="phone-contact" data-contact="__watchorders__">
+      <div class="phone-contact-name">Watch Orders ${pendingWatchOrders > 0 ? `<span class="phone-badge">${pendingWatchOrders}</span>` : ""}</div>
+      <div class="phone-contact-preview">${pendingWatchOrders > 0 ? `${pendingWatchOrders} order${pendingWatchOrders > 1 ? "s" : ""} waiting on you` : "No orders right now"}</div>
     </div>`;
 
   const contactRows = CONTACTS.map((c) => {
@@ -1063,6 +1077,65 @@ function renderDrugRequestsView() {
   document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
 }
 
+function renderWatchSupplierPanel() {
+  phoneOpenContact = "__watchsupplier__";
+  document.getElementById("phone-title").textContent = "Watch Supplier";
+  document.getElementById("phone-back").classList.remove("hidden");
+
+  const rows = WATCH_SUPPLIER_CATALOG.map((w) => {
+    const owned = state.watchInventory[w.id] || 0;
+    return `
+      <div class="plug-row">
+        <div class="art-box">${itemArtSVG(w.id, 56)}</div>
+        <div class="plug-row-title">${w.name} <span class="plug-row-stock">${owned} on hand</span></div>
+        <div class="card-row">${fmt(w.buyPrice)} each</div>
+        <div class="crypto-action-group">
+          <button class="btn" data-action="buy-watch" data-watch="${w.id}" data-qty="1" ${state.cash < w.buyPrice ? "disabled" : ""}>Buy 1 — ${fmt(w.buyPrice)}</button>
+          <button class="btn" data-action="buy-watch" data-watch="${w.id}" data-qty="5" ${state.cash < w.buyPrice * 5 ? "disabled" : ""}>Buy 5 — ${fmt(w.buyPrice * 5)}</button>
+        </div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+}
+
+function renderWatchOrdersView() {
+  phoneOpenContact = "__watchorders__";
+  document.getElementById("phone-title").textContent = "Watch Orders";
+  document.getElementById("phone-back").classList.remove("hidden");
+
+  if (state.watchOrders.length === 0) {
+    document.getElementById("phone-body").innerHTML = `<div class="hint">No orders right now. Check back soon.</div>`;
+    return;
+  }
+
+  const rows = state.watchOrders
+    .map((order) => {
+      const w = WATCH_SUPPLIER_CATALOG.find((x) => x.id === order.watchId);
+      const remain = Math.max(0, Math.ceil((order.expiresAt - Date.now()) / 1000));
+      const haveEnough = (state.watchInventory[order.watchId] || 0) >= order.qty;
+      const counterBtns = WATCH_COUNTER_OPTIONS.map(
+        (opt) =>
+          `<button class="btn launder" data-action="counter-watch-order" data-id="${order.id}" data-pct="${opt.pct}" data-chance="${opt.chance}" ${haveEnough ? "" : "disabled"}>${opt.label} (${Math.round(opt.chance * 100)}%)</button>`
+      ).join("");
+      return `
+        <div class="plug-row">
+          <div class="art-box">${itemArtSVG(w.id, 56)}</div>
+          <div class="plug-row-title">Wants ${order.qty} ${w.name}${order.qty > 1 ? "s" : ""}</div>
+          <div class="card-row">Offering ${fmt(order.offerPrice)} · expires in ${remain}s</div>
+          ${!haveEnough ? `<div class="locked-tag">Not enough ${w.name} in stock</div>` : ""}
+          <div class="crypto-action-group">
+            <button class="btn" data-action="accept-watch-order" data-id="${order.id}" ${haveEnough ? "" : "disabled"}>Accept — ${fmt(order.offerPrice)}</button>
+            ${counterBtns}
+            <button class="btn sell" data-action="decline-watch-order" data-id="${order.id}">Decline</button>
+          </div>
+        </div>`;
+    })
+    .join("");
+
+  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+}
+
 function renderPhoneThread(contactId) {
   const contact = CONTACTS.find((c) => c.id === contactId);
   if (!contact) return;
@@ -1112,12 +1185,18 @@ document.getElementById("phone-body").addEventListener("click", (e) => {
     else if (action === "accept-gun-order") acceptGunOrder(actionBtn.dataset.id);
     else if (action === "counter-gun-order") counterGunOrder(actionBtn.dataset.id, Number(actionBtn.dataset.pct), Number(actionBtn.dataset.chance));
     else if (action === "decline-gun-order") declineGunOrder(actionBtn.dataset.id);
+    else if (action === "buy-watch") buyWatchStock(actionBtn.dataset.watch, Number(actionBtn.dataset.qty));
+    else if (action === "accept-watch-order") acceptWatchOrder(actionBtn.dataset.id);
+    else if (action === "counter-watch-order") counterWatchOrder(actionBtn.dataset.id, Number(actionBtn.dataset.pct), Number(actionBtn.dataset.chance));
+    else if (action === "decline-watch-order") declineWatchOrder(actionBtn.dataset.id);
   } else if (contactRow) {
     const id = contactRow.dataset.contact;
     if (id === "__plug__") renderPlugPanel();
     else if (id === "__requests__") renderDrugRequestsView();
     else if (id === "__armsdealer__") renderArmsDealerPanel();
     else if (id === "__gunorders__") renderGunOrdersView();
+    else if (id === "__watchsupplier__") renderWatchSupplierPanel();
+    else if (id === "__watchorders__") renderWatchOrdersView();
     else renderPhoneThread(id);
   }
 });
