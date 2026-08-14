@@ -44,6 +44,7 @@ function freshState() {
     currentCity: "detroit",
     highestTierSeen: 0,
     lastSpecialSlotCompleted: null,
+    rivalsDefeated: [],
   };
 }
 
@@ -145,6 +146,27 @@ function businessHeatReduction() {
   return total;
 }
 
+// ---------- Rival crews ----------
+
+function rivalPenalty(effectType) {
+  return RIVAL_CREWS.filter((r) => r.effect === effectType && !state.rivalsDefeated.includes(r.id)).reduce(
+    (sum, r) => sum + r.amount,
+    0
+  );
+}
+
+function defeatRival(rivalId) {
+  const r = RIVAL_CREWS.find((r) => r.id === rivalId);
+  if (!r || state.rivalsDefeated.includes(rivalId)) return;
+  if (state.rep < r.repReq) return;
+  if (state.cash < r.cost) return;
+  state.cash -= r.cost;
+  state.rivalsDefeated.push(rivalId);
+  addLog(`💀 Wiped out ${r.name} — that turf is yours now.`, "success");
+  save();
+  render();
+}
+
 function totalHeatReduction() {
   const residenceReduction = state.residences.reduce((sum, r) => {
     const h = houseData(r);
@@ -233,20 +255,20 @@ function resolveContract(performance) {
   const heatPenalty = Math.min(state.heat / 250, 0.3); // high heat hurts odds
   const chanceBonus = (performance - 0.5) * 0.4; // mini-game performance: -0.2 to +0.2
   const crewBonus = state.phone.nextJobBonus || 0;
-  const chance = Math.max(0.05, Math.min(0.97, c.baseChance + weaponBonus() - heatPenalty + chanceBonus + crewBonus));
+  const chance = Math.max(0.05, Math.min(0.97, c.baseChance + weaponBonus() - heatPenalty + chanceBonus + crewBonus - rivalPenalty("odds")));
   const success = Math.random() < chance;
   if (crewBonus > 0) {
     addLog(`Crew's backup paid off: +${Math.round(crewBonus * 100)}% odds`, "buy");
     state.phone.nextJobBonus = 0;
   }
   const heatReduction = Math.min(totalHeatReduction(), 0.6);
-  const heatGain = c.heat * (1 - heatReduction);
+  const heatGain = c.heat * (1 - heatReduction) * (1 + rivalPenalty("heat"));
 
   if (success) {
     const payoutBoost = sumFlexEffect("payoutBoost");
     const repBoost = sumFlexEffect("repBoost");
     const payoutMult = 0.85 + performance * 0.35; // mini-game performance: 0.85x to 1.2x
-    const payout = Math.round(c.payout * (1 + payoutBoost) * payoutMult);
+    const payout = Math.round(c.payout * (1 + payoutBoost) * payoutMult * (1 - rivalPenalty("payout")));
     const repGain = Math.round(c.rep * (1 + repBoost));
     state.cash += payout;
     addRep(repGain);
@@ -714,6 +736,7 @@ function processBusinessPayout() {
     const b = BUSINESSES.find((b) => b.id === id);
     if (b) income += b.income;
   }
+  income = Math.round(income * (1 - rivalPenalty("business")));
   state.cash += income;
   state.stats.totalEarned += income;
   addLog(`Business income: +${fmt(income)}`, "success");

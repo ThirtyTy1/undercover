@@ -93,6 +93,7 @@ function renderTabContent() {
   else if (activeTab === "bank") el.innerHTML = bankTabHTML();
   else if (activeTab === "casino") el.innerHTML = casinoTabHTML();
   else if (activeTab === "businesses") el.innerHTML = businessesTabHTML();
+  else if (activeTab === "rivals") el.innerHTML = rivalsTabHTML();
   else if (activeTab === "housing") el.innerHTML = housingTabHTML();
   else if (activeTab === "world") el.innerHTML = worldTabHTML();
   else if (activeTab === "laylow") el.innerHTML = laylowTabHTML();
@@ -815,6 +816,48 @@ function businessesTabHTML() {
   return `${status}<div class="grid">${cards}</div>`;
 }
 
+const RIVAL_EFFECT_LABEL = {
+  heat: (amt) => `+${Math.round(amt * 100)}% heat gain from contracts`,
+  business: (amt) => `-${Math.round(amt * 100)}% business income`,
+  odds: (amt) => `-${Math.round(amt * 100)}% contract success odds`,
+  payout: (amt) => `-${Math.round(amt * 100)}% contract payout`,
+};
+
+function rivalsTabHTML() {
+  const active = RIVAL_CREWS.filter((r) => !state.rivalsDefeated.includes(r.id));
+  const summary =
+    active.length > 0
+      ? `<div class="active-contract burned">
+          <div class="active-title">${active.length} crew${active.length === 1 ? "" : "s"} still contesting your turf</div>
+          <div class="card-row">Costing you: ${["heat", "business", "odds", "payout"]
+            .map((e) => rivalPenalty(e))
+            .map((amt, i) => (amt > 0 ? RIVAL_EFFECT_LABEL[["heat", "business", "odds", "payout"][i]](amt) : null))
+            .filter(Boolean)
+            .join(" · ")}</div>
+        </div>`
+      : `<div class="active-contract">Every rival crew is gone. The territory is entirely yours.</div>`;
+
+  const cards = RIVAL_CREWS.map((r) => {
+    const defeated = state.rivalsDefeated.includes(r.id);
+    const locked = state.rep < r.repReq;
+    return `
+      <div class="card ${locked ? "locked" : ""} ${defeated ? "owned" : ""}">
+        <div class="card-title">${r.name}</div>
+        <div class="card-row">${r.desc}</div>
+        <div class="card-row">${RIVAL_EFFECT_LABEL[r.effect](r.amount)}</div>
+        ${
+          defeated
+            ? `<button class="btn equipped" disabled>Wiped Out</button>`
+            : locked
+            ? `<div class="locked-tag">Requires ${r.repReq} rep</div>`
+            : `<button class="btn sell" data-action="defeat-rival" data-id="${r.id}" ${state.cash < r.cost ? "disabled" : ""}>Take Them Out — ${fmt(r.cost)}</button>`
+        }
+      </div>`;
+  }).join("");
+
+  return `${summary}<div class="grid">${cards}</div>`;
+}
+
 function worldTabHTML() {
   const ownedJet = hasPrivateJet();
   const cards = CITIES.map((c) => {
@@ -862,6 +905,7 @@ function bindTabEvents() {
       else if (action === "equip-agent") equipAgentGear(btn.dataset.id, btn.dataset.slot, btn.dataset.gear);
       else if (action === "buy-business") buyBusiness(id);
       else if (action === "sell-business") sellBusiness(id);
+      else if (action === "defeat-rival") defeatRival(id);
       else if (action === "travel-city") travelToCity(id);
       else if (action === "export-save") exportSave();
       else if (action === "import-save-trigger") document.getElementById("import-save-input").click();
