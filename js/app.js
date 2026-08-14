@@ -22,6 +22,7 @@ function freshState() {
     hiredAgents: [],
     nextAgentPayoutAt: null,
     businesses: [],
+    businessCondition: {}, // id -> 0..100, decays each payout cycle, restored by maintainBusiness()
     nextBusinessPayoutAt: null,
     drugInventory: { weed: 0, pens: 0, shrooms: 0, coke: 0 },
     drugRequests: [],
@@ -67,6 +68,10 @@ function load() {
       state.businesses = state.businesses.filter((id) => BUSINESSES.some((b) => b.id === id));
       delete state.wallet;
       delete state.rivalsDefeated;
+      // Existing owned businesses from before condition/upkeep existed start at full condition.
+      for (const id of state.businesses) {
+        if (typeof state.businessCondition[id] !== "number") state.businessCondition[id] = 100;
+      }
     } catch (e) {
       console.warn("save corrupted, starting fresh");
     }
@@ -623,6 +628,7 @@ function buyBusiness(id) {
   if (state.cash < b.cost) return;
   state.cash -= b.cost;
   state.businesses.push(id);
+  state.businessCondition[id] = 100;
   if (!state.nextBusinessPayoutAt) state.nextBusinessPayoutAt = Date.now() + BUSINESS_CYCLE_SECONDS * 1000;
   addLog(`Acquired ${b.name} for ${fmt(b.cost)}`, "buy");
   save();
@@ -634,8 +640,25 @@ function sellBusiness(id) {
   if (!b || !businessOwned(id)) return;
   const refund = Math.round(b.cost * SELL_RATE);
   state.businesses = state.businesses.filter((x) => x !== id);
+  delete state.businessCondition[id];
   state.cash += refund;
   addLog(`Sold ${b.name} for ${fmt(refund)}`, "sell");
+  save();
+  render();
+}
+
+function businessMaintainCost(b) {
+  return Math.round(b.cost * BUSINESS_MAINTAIN_COST_PCT);
+}
+
+function maintainBusiness(id) {
+  const b = BUSINESSES.find((b) => b.id === id);
+  if (!b || !businessOwned(id)) return;
+  const cost = businessMaintainCost(b);
+  if (state.cash < cost) return;
+  state.cash -= cost;
+  state.businessCondition[id] = 100;
+  addLog(`Maintained ${b.name} for ${fmt(cost)} — back to full condition`, "buy");
   save();
   render();
 }
@@ -650,7 +673,11 @@ function processBusinessPayout() {
   let income = 0;
   for (const id of state.businesses) {
     const b = BUSINESSES.find((b) => b.id === id);
-    if (b) income += b.income;
+    if (!b) continue;
+    const condition = state.businessCondition[id] ?? 100;
+    const mult = BUSINESS_CONDITION_MIN_INCOME_MULT + (1 - BUSINESS_CONDITION_MIN_INCOME_MULT) * (condition / 100);
+    income += Math.round(b.income * mult);
+    state.businessCondition[id] = Math.max(0, condition - BUSINESS_CONDITION_DECAY);
   }
   state.cash += income;
   state.stats.totalEarned += income;

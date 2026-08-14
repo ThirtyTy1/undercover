@@ -776,9 +776,15 @@ function agentRosterHTML() {
     .join("");
 }
 
+function businessEffectiveIncome(b) {
+  const condition = state.businessCondition[b.id] ?? 100;
+  const mult = BUSINESS_CONDITION_MIN_INCOME_MULT + (1 - BUSINESS_CONDITION_MIN_INCOME_MULT) * (condition / 100);
+  return Math.round(b.income * mult);
+}
+
 function businessesTabHTML() {
   const remain = state.nextBusinessPayoutAt ? Math.max(0, Math.ceil((state.nextBusinessPayoutAt - Date.now()) / 1000)) : null;
-  const totalIncome = BUSINESSES.filter((b) => businessOwned(b.id)).reduce((sum, b) => sum + b.income, 0);
+  const totalIncome = BUSINESSES.filter((b) => businessOwned(b.id)).reduce((sum, b) => sum + businessEffectiveIncome(b), 0);
   const status =
     state.businesses.length > 0
       ? `<div class="active-contract"><div class="active-title">${state.businesses.length} business${state.businesses.length === 1 ? "" : "es"} owned — ${fmt(totalIncome)} / cycle</div><div class="card-row">Next payout in ${remain}s</div></div>`
@@ -787,6 +793,8 @@ function businessesTabHTML() {
   const cards = BUSINESSES.map((b) => {
     const owned = businessOwned(b.id);
     const locked = state.rep < b.repReq;
+    const condition = owned ? state.businessCondition[b.id] ?? 100 : 100;
+    const maintainCost = businessMaintainCost(b);
     return `
       <div class="card ${locked ? "locked" : ""} ${owned ? "owned" : ""}">
         <div class="card-title">${b.name}</div>
@@ -795,8 +803,11 @@ function businessesTabHTML() {
         <div class="card-row">${b.perkLabel}</div>
         ${
           owned
-            ? `<button class="btn equipped" disabled>Owned</button>
-               <button class="btn sell" data-action="sell-business" data-id="${b.id}">Sell — ${fmt(Math.round(b.cost * SELL_RATE))}</button>`
+            ? `
+              <div class="card-row">Condition: ${Math.round(condition)}% — earning ${fmt(businessEffectiveIncome(b))} / cycle</div>
+              <div class="heat-bar"><div class="heat-fill" style="width:${condition}%;background:${condition > 50 ? "linear-gradient(90deg, var(--neon-teal), #7fffb0)" : "linear-gradient(90deg, var(--neon-red), var(--neon-gold))"}"></div></div>
+              <button class="btn" data-action="maintain-business" data-id="${b.id}" ${condition >= 100 || state.cash < maintainCost ? "disabled" : ""}>Maintain — ${fmt(maintainCost)}</button>
+              <button class="btn sell" data-action="sell-business" data-id="${b.id}">Sell — ${fmt(Math.round(b.cost * SELL_RATE))}</button>`
             : locked
             ? `<div class="locked-tag">Requires ${b.repReq} rep</div>`
             : `<button class="btn" data-action="buy-business" data-id="${b.id}" ${state.cash < b.cost ? "disabled" : ""}>Buy — ${fmt(b.cost)}</button>`
@@ -849,6 +860,7 @@ function bindTabEvents() {
       else if (action === "equip-agent") equipAgentGear(btn.dataset.id, btn.dataset.slot, btn.dataset.gear);
       else if (action === "buy-business") buyBusiness(id);
       else if (action === "sell-business") sellBusiness(id);
+      else if (action === "maintain-business") maintainBusiness(id);
       else if (action === "travel-city") travelToCity(id);
       else if (action === "export-save") exportSave();
       else if (action === "import-save-trigger") document.getElementById("import-save-input").click();

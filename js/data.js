@@ -355,6 +355,12 @@ const HIGHLOW_MULTIPLIER_STEP = 1.6;
 
 // Businesses: one-time purchases, own or don't. Passive income plus a real perk.
 const BUSINESS_CYCLE_SECONDS = 60;
+// Businesses aren't fully passive — condition decays every payout cycle and drags
+// income down with it, so there's a reason to check back in and pay upkeep instead
+// of just buying once and forgetting about it.
+const BUSINESS_CONDITION_DECAY = 5; // % lost per cycle
+const BUSINESS_CONDITION_MIN_INCOME_MULT = 0.3; // income floor at 0% condition
+const BUSINESS_MAINTAIN_COST_PCT = 0.05; // upkeep cost as a fraction of the business's purchase cost
 
 const BUSINESSES = [
   {
