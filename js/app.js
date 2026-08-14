@@ -2,18 +2,9 @@
 
 const SAVE_KEY = "hitman_empire_save_v1";
 
-function freshWallet() {
-  const wallet = {};
-  for (const c of CRYPTOS) {
-    wallet[c.id] = { amount: 0, price: c.startPrice, history: [c.startPrice] };
-  }
-  return wallet;
-}
-
 function freshState() {
   return {
     cash: 500,
-    wallet: freshWallet(),
     bankBalance: 0,
     nextInterestAt: null,
     heat: 0,
@@ -44,7 +35,6 @@ function freshState() {
     currentCity: "detroit",
     highestTierSeen: 0,
     lastSpecialSlotCompleted: null,
-    rivalsDefeated: [],
   };
 }
 
@@ -68,6 +58,15 @@ function load() {
       state.rep = Math.min(MAX_REP, state.rep);
       // Drop stale orders/stock referencing items removed from a catalog (e.g. Revolver).
       state.gunOrders = state.gunOrders.filter((o) => ARMS_CATALOG.some((g) => g.id === o.gunId));
+      // Crypto and Rivals were removed entirely. Refund anyone who owned Crypto Exchange
+      // (its perk no longer means anything) and drop the leftover wallet/rivals state.
+      if (state.businesses.includes("cryptoexchange")) {
+        state.cash += 600000;
+        addLog("Crypto Exchange shut down — refunded $600,000", "info");
+      }
+      state.businesses = state.businesses.filter((id) => BUSINESSES.some((b) => b.id === id));
+      delete state.wallet;
+      delete state.rivalsDefeated;
     } catch (e) {
       console.warn("save corrupted, starting fresh");
     }
@@ -146,27 +145,6 @@ function businessHeatReduction() {
   return total;
 }
 
-// ---------- Rival crews ----------
-
-function rivalPenalty(effectType) {
-  return RIVAL_CREWS.filter((r) => r.effect === effectType && !state.rivalsDefeated.includes(r.id)).reduce(
-    (sum, r) => sum + r.amount,
-    0
-  );
-}
-
-function defeatRival(rivalId) {
-  const r = RIVAL_CREWS.find((r) => r.id === rivalId);
-  if (!r || state.rivalsDefeated.includes(rivalId)) return;
-  if (state.rep < r.repReq) return;
-  if (state.cash < r.cost) return;
-  state.cash -= r.cost;
-  state.rivalsDefeated.push(rivalId);
-  addLog(`💀 Wiped out ${r.name} — that turf is yours now.`, "success");
-  save();
-  render();
-}
-
 function totalHeatReduction() {
   const residenceReduction = state.residences.reduce((sum, r) => {
     const h = houseData(r);
@@ -175,17 +153,8 @@ function totalHeatReduction() {
   return sumFlexEffect("heatReduction") + residenceReduction + businessHeatReduction();
 }
 
-function walletValue() {
-  let total = 0;
-  for (const c of CRYPTOS) {
-    const w = state.wallet[c.id];
-    if (w) total += w.amount * w.price;
-  }
-  return total;
-}
-
 function netWorth() {
-  let total = state.cash + state.bankBalance + walletValue();
+  let total = state.cash + state.bankBalance;
   for (const id of state.ownedWeapons) {
     const w = WEAPONS.find((w) => w.id === id);
     if (w && !w.starter) total += w.cost;
@@ -255,20 +224,20 @@ function resolveContract(performance) {
   const heatPenalty = Math.min(state.heat / 250, 0.3); // high heat hurts odds
   const chanceBonus = (performance - 0.5) * 0.4; // mini-game performance: -0.2 to +0.2
   const crewBonus = state.phone.nextJobBonus || 0;
-  const chance = Math.max(0.05, Math.min(0.97, c.baseChance + weaponBonus() - heatPenalty + chanceBonus + crewBonus - rivalPenalty("odds")));
+  const chance = Math.max(0.05, Math.min(0.97, c.baseChance + weaponBonus() - heatPenalty + chanceBonus + crewBonus));
   const success = Math.random() < chance;
   if (crewBonus > 0) {
     addLog(`Crew's backup paid off: +${Math.round(crewBonus * 100)}% odds`, "buy");
     state.phone.nextJobBonus = 0;
   }
   const heatReduction = Math.min(totalHeatReduction(), 0.6);
-  const heatGain = c.heat * (1 - heatReduction) * (1 + rivalPenalty("heat"));
+  const heatGain = c.heat * (1 - heatReduction);
 
   if (success) {
     const payoutBoost = sumFlexEffect("payoutBoost");
     const repBoost = sumFlexEffect("repBoost");
     const payoutMult = 0.85 + performance * 0.35; // mini-game performance: 0.85x to 1.2x
-    const payout = Math.round(c.payout * (1 + payoutBoost) * payoutMult * (1 - rivalPenalty("payout")));
+    const payout = Math.round(c.payout * (1 + payoutBoost) * payoutMult);
     const repGain = Math.round(c.rep * (1 + repBoost));
     state.cash += payout;
     addRep(repGain);
@@ -500,60 +469,6 @@ function payBillEarly(type, id) {
   render();
 }
 
-// ---------- Crypto ----------
-
-function tickCrypto() {
-  for (const c of CRYPTOS) {
-    const w = state.wallet[c.id];
-    if (!w) continue;
-    const change = c.drift + (Math.random() * 2 - 1) * c.volatility;
-    w.price = Math.max(0.0001, w.price * (1 + change));
-    w.history.push(w.price);
-    if (w.history.length > 40) w.history.shift();
-  }
-}
-
-function buyCrypto(coinId, amountCash) {
-  const w = state.wallet[coinId];
-  if (!w) return;
-  amountCash = Math.min(amountCash, state.cash);
-  if (amountCash <= 0) return;
-  const bought = amountCash / w.price;
-  state.cash -= amountCash;
-  w.amount += bought;
-  addLog(`Bought ${bought.toFixed(6)} ${coinId} for ${fmt(amountCash)}`, "buy");
-  save();
-  render();
-}
-
-function sellCrypto(coinId, amountCoin) {
-  const w = state.wallet[coinId];
-  if (!w) return;
-  amountCoin = Math.min(amountCoin, w.amount);
-  if (amountCoin <= 0) return;
-  const proceeds = amountCoin * w.price;
-  w.amount -= amountCoin;
-  state.cash += proceeds;
-  addLog(`Sold ${amountCoin.toFixed(6)} ${coinId} for ${fmt(proceeds)}`, "sell");
-  save();
-  render();
-}
-
-function launderCash(coinId, amountCash) {
-  const w = state.wallet[coinId];
-  if (!w) return;
-  amountCash = Math.min(amountCash, state.cash);
-  if (amountCash <= 0) return;
-  const fee = 0.1 * (1 - businessPerk("launderDiscount"));
-  const bought = (amountCash * (1 - fee)) / w.price;
-  state.cash -= amountCash;
-  w.amount += bought;
-  state.heat = Math.max(0, state.heat - 15);
-  addLog(`Laundered ${fmt(amountCash)} → ${bought.toFixed(6)} ${coinId}, -15 heat`, "launder");
-  save();
-  render();
-}
-
 // ---------- Bank / ATM ----------
 
 function depositBank(amount) {
@@ -736,7 +651,6 @@ function processBusinessPayout() {
     const b = BUSINESSES.find((b) => b.id === id);
     if (b) income += b.income;
   }
-  income = Math.round(income * (1 - rivalPenalty("business")));
   state.cash += income;
   state.stats.totalEarned += income;
   addLog(`Business income: +${fmt(income)}`, "success");
@@ -1412,8 +1326,6 @@ function gameTick() {
   const decay = 0.3 * (1 + totalHeatReduction());
   state.heat = Math.max(0, state.heat - decay);
 
-  // crypto price every 3 ticks
-  if (state.tickCount % 3 === 0) tickCrypto();
 
   processBilling();
   processBankInterest();

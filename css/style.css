@@ -136,7 +136,6 @@ body {
   letter-spacing: 0.5px;
 }
 .stat-value.cash { color: var(--neon-gold); font-weight: 600; text-shadow: 0 0 8px rgba(255, 209, 102, 0.4); }
-.stat-value.crypto { color: var(--neon-teal); font-weight: 600; }
 .stat-value.bank { color: #7fffb0; font-weight: 600; }
 
 .heat-bar, .rep-bar {
@@ -651,41 +650,6 @@ body {
   transition: width 1s linear;
 }
 
-/* ---------- Crypto ---------- */
-
-.crypto-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-.crypto-coin-header { display: flex; flex-direction: column; gap: 2px; }
-.crypto-price {
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  color: var(--neon-gold);
-  text-shadow: 0 0 10px var(--neon-gold);
-}
-.sparkline {
-  width: 100%;
-  height: 140px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-}
-.sparkline polyline {
-  fill: none;
-  stroke: var(--neon-teal);
-  stroke-width: 2;
-  filter: drop-shadow(0 0 4px var(--neon-teal));
-}
-.crypto-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .crypto-action-group {
   display: flex;
   gap: 10px;

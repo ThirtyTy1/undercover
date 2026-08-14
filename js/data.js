@@ -307,13 +307,6 @@ const ARMS_CATALOG = [
   { id: "sniper", name: "Heavy SMG", buyPrice: 5000, sellPrice: 8200, heat: 4 },
 ];
 
-// Simulated crypto — starting prices are realistic ballpark figures, not live market data.
-const CRYPTOS = [
-  { id: "BTC", name: "Bitcoin", startPrice: 65000, volatility: 0.03, drift: 0.0012 },
-  { id: "ETH", name: "Ethereum", startPrice: 3200, volatility: 0.045, drift: 0.0012 },
-  { id: "DOGE", name: "Dogecoin", startPrice: 0.15, volatility: 0.09, drift: 0.0002 },
-];
-
 const BANK_INTEREST_CYCLE_SECONDS = 90;
 const BANK_INTEREST_RATE = 0.01; // per cycle, on bank balance only
 const ATM_FEE_RATE = 0.01; // fee taken on ATM withdrawals
@@ -342,22 +335,6 @@ const ROULETTE_OUTSIDE_BETS = [
   { type: "dozen3", label: "3rd 12", mult: 3 },
 ];
 const ROULETTE_STRAIGHT_MULT = 36;
-
-// Rival crews: each one contesting your turf imposes a passive penalty until you pay
-// to wipe them out — a permanent, one-time cash sink that isn't gambling or a
-// collectible, just buying your territory back. Once defeated, the penalty is gone
-// for good; they never come back.
-const RIVAL_CREWS = [
-  { id: "riv1", name: "Street Corner Crew", desc: "Small-timers skimming off your early jobs.", repReq: 0, cost: 15000, effect: "heat", amount: 0.05 },
-  { id: "riv2", name: "Docks Syndicate", desc: "Running product through your warehouses.", repReq: 100, cost: 60000, effect: "business", amount: 0.08 },
-  { id: "riv3", name: "Southside Enforcers", desc: "Tipping off marks before you get there.", repReq: 400, cost: 180000, effect: "odds", amount: 0.04 },
-  { id: "riv4", name: "The Vultures", desc: "Skimming a cut off every payout in your territory.", repReq: 1000, cost: 500000, effect: "payout", amount: 0.06 },
-  { id: "riv5", name: "Ghost River Cartel", desc: "Their heat draws eyes straight to your operation.", repReq: 1800, cost: 1200000, effect: "heat", amount: 0.08 },
-  { id: "riv6", name: "The Iron Circle", desc: "Undercutting every business you run.", repReq: 2500, cost: 2500000, effect: "business", amount: 0.1 },
-  { id: "riv7", name: "Midnight Syndicate", desc: "Feeding your targets' security your patterns.", repReq: 6000, cost: 5000000, effect: "odds", amount: 0.05 },
-  { id: "riv8", name: "The Black Hand", desc: "Taxing every job that crosses their turf.", repReq: 12000, cost: 9000000, effect: "payout", amount: 0.08 },
-  { id: "riv9", name: "The Last Empire", desc: "The final crew standing between you and total control.", repReq: 25000, cost: 15000000, effect: "heat", amount: 0.1 },
-];
 
 // Businesses: one-time purchases, own or don't. Passive income plus a real perk.
 const BUSINESS_CYCLE_SECONDS = 60;
@@ -410,18 +387,6 @@ const BUSINESSES = [
     perkAmount: 0.15,
     perkLabel: "-15% car prices",
     repReq: 100,
-  },
-  {
-    id: "cryptoexchange",
-    name: "Crypto Exchange",
-    desc: "Your own trading desk. Makes moving dirty money easier.",
-    cost: 600000,
-    income: 6000,
-    heatReduction: 0.05,
-    perk: "launderDiscount",
-    perkAmount: 0.5,
-    perkLabel: "-50% laundering fee",
-    repReq: 400,
   },
   {
     id: "realestate",

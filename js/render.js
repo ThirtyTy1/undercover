@@ -57,10 +57,6 @@ function renderStats() {
       <span class="stat-label">Bank</span>
       <span class="stat-value bank">${fmt(state.bankBalance)}</span>
     </div>
-    <div class="stat">
-      <span class="stat-label">Crypto</span>
-      <span class="stat-value crypto">${fmt(walletValue())}</span>
-    </div>
     <div class="stat heat-stat">
       <span class="stat-label">Suspicion</span>
       <div class="heat-bar"><div class="heat-fill" style="width:${state.heat}%"></div></div>
@@ -89,11 +85,9 @@ function renderTabContent() {
   if (activeTab === "contracts") el.innerHTML = contractsTabHTML();
   else if (activeTab === "arsenal") el.innerHTML = arsenalTabHTML();
   else if (activeTab === "flex") el.innerHTML = flexTabHTML();
-  else if (activeTab === "crypto") el.innerHTML = cryptoTabHTML();
   else if (activeTab === "bank") el.innerHTML = bankTabHTML();
   else if (activeTab === "casino") el.innerHTML = casinoTabHTML();
   else if (activeTab === "businesses") el.innerHTML = businessesTabHTML();
-  else if (activeTab === "rivals") el.innerHTML = rivalsTabHTML();
   else if (activeTab === "housing") el.innerHTML = housingTabHTML();
   else if (activeTab === "world") el.innerHTML = worldTabHTML();
   else if (activeTab === "laylow") el.innerHTML = laylowTabHTML();
@@ -270,52 +264,6 @@ function flexTabHTML() {
     </div>`;
   const active = FLEX_CATEGORIES.find((c) => c.key === flexView) || FLEX_CATEGORIES[0];
   return nav + flexCategoryHTML(active.label, active.items());
-}
-
-function coinSparkline(history) {
-  const max = Math.max(...history);
-  const min = Math.min(...history);
-  const range = max - min || 1;
-  return history
-    .map((p, i) => {
-      const x = (i / (history.length - 1 || 1)) * 300;
-      const y = 80 - ((p - min) / range) * 80;
-      return `${x},${y}`;
-    })
-    .join(" ");
-}
-
-function cryptoTabHTML() {
-  const coins = CRYPTOS.map((c) => {
-    const w = state.wallet[c.id];
-    const points = coinSparkline(w.history);
-    const holdingsVal = w.amount * w.price;
-    const priceStr = w.price >= 1 ? fmt(w.price) : "$" + w.price.toFixed(4);
-    return `
-      <div class="crypto-panel">
-        <div class="crypto-coin-header">
-          <div class="crypto-price">${c.name} (${c.id}) — ${priceStr}</div>
-          <div class="card-row">Holdings: ${w.amount.toFixed(6)} ${c.id} (${fmt(holdingsVal)})</div>
-        </div>
-        <svg viewBox="0 0 300 80" class="sparkline"><polyline points="${points}" /></svg>
-        <div class="crypto-actions">
-          <div class="crypto-action-group">
-            <button class="btn" data-action="buy-crypto" data-coin="${c.id}" data-amount="500">Buy ${fmt(500)}</button>
-            <button class="btn" data-action="buy-crypto" data-coin="${c.id}" data-amount="5000">Buy ${fmt(5000)}</button>
-            <button class="btn" data-action="buy-crypto-all" data-coin="${c.id}">Buy All Cash</button>
-          </div>
-          <div class="crypto-action-group">
-            <button class="btn" data-action="sell-crypto-all" data-coin="${c.id}">Sell All ${c.id}</button>
-          </div>
-          <div class="crypto-action-group">
-            <button class="btn launder" data-action="launder" data-coin="${c.id}" data-amount="2000">Launder ${fmt(2000)}</button>
-            <button class="btn launder" data-action="launder-all" data-coin="${c.id}">Launder All Cash</button>
-          </div>
-        </div>
-      </div>`;
-  }).join("");
-
-  return `${coins}<div class="hint">Laundering converts dirty cash into a coin at a 10% cut, and cools your heat by 15. Simulated prices — not live market data.</div>`;
 }
 
 function bankTabHTML() {
@@ -816,48 +764,6 @@ function businessesTabHTML() {
   return `${status}<div class="grid">${cards}</div>`;
 }
 
-const RIVAL_EFFECT_LABEL = {
-  heat: (amt) => `+${Math.round(amt * 100)}% heat gain from contracts`,
-  business: (amt) => `-${Math.round(amt * 100)}% business income`,
-  odds: (amt) => `-${Math.round(amt * 100)}% contract success odds`,
-  payout: (amt) => `-${Math.round(amt * 100)}% contract payout`,
-};
-
-function rivalsTabHTML() {
-  const active = RIVAL_CREWS.filter((r) => !state.rivalsDefeated.includes(r.id));
-  const summary =
-    active.length > 0
-      ? `<div class="active-contract burned">
-          <div class="active-title">${active.length} crew${active.length === 1 ? "" : "s"} still contesting your turf</div>
-          <div class="card-row">Costing you: ${["heat", "business", "odds", "payout"]
-            .map((e) => rivalPenalty(e))
-            .map((amt, i) => (amt > 0 ? RIVAL_EFFECT_LABEL[["heat", "business", "odds", "payout"][i]](amt) : null))
-            .filter(Boolean)
-            .join(" · ")}</div>
-        </div>`
-      : `<div class="active-contract">Every rival crew is gone. The territory is entirely yours.</div>`;
-
-  const cards = RIVAL_CREWS.map((r) => {
-    const defeated = state.rivalsDefeated.includes(r.id);
-    const locked = state.rep < r.repReq;
-    return `
-      <div class="card ${locked ? "locked" : ""} ${defeated ? "owned" : ""}">
-        <div class="card-title">${r.name}</div>
-        <div class="card-row">${r.desc}</div>
-        <div class="card-row">${RIVAL_EFFECT_LABEL[r.effect](r.amount)}</div>
-        ${
-          defeated
-            ? `<button class="btn equipped" disabled>Wiped Out</button>`
-            : locked
-            ? `<div class="locked-tag">Requires ${r.repReq} rep</div>`
-            : `<button class="btn sell" data-action="defeat-rival" data-id="${r.id}" ${state.cash < r.cost ? "disabled" : ""}>Take Them Out — ${fmt(r.cost)}</button>`
-        }
-      </div>`;
-  }).join("");
-
-  return `${summary}<div class="grid">${cards}</div>`;
-}
-
 function worldTabHTML() {
   const ownedJet = hasPrivateJet();
   const cards = CITIES.map((c) => {
@@ -894,18 +800,12 @@ function bindTabEvents() {
       else if (action === "sell-weapon") sellWeapon(id);
       else if (action === "buy-flex") buyFlex(id);
       else if (action === "sell-flex") sellFlex(id);
-      else if (action === "buy-crypto") buyCrypto(btn.dataset.coin, Number(btn.dataset.amount));
-      else if (action === "buy-crypto-all") buyCrypto(btn.dataset.coin, state.cash);
-      else if (action === "sell-crypto-all") sellCrypto(btn.dataset.coin, state.wallet[btn.dataset.coin].amount);
-      else if (action === "launder") launderCash(btn.dataset.coin, Number(btn.dataset.amount));
-      else if (action === "launder-all") launderCash(btn.dataset.coin, state.cash);
       else if (action === "lay-low") doLayLow(id);
       else if (action === "hire-agent") hireAgent(id);
       else if (action === "dismiss-agent") dismissAgent(id);
       else if (action === "equip-agent") equipAgentGear(btn.dataset.id, btn.dataset.slot, btn.dataset.gear);
       else if (action === "buy-business") buyBusiness(id);
       else if (action === "sell-business") sellBusiness(id);
-      else if (action === "defeat-rival") defeatRival(id);
       else if (action === "travel-city") travelToCity(id);
       else if (action === "export-save") exportSave();
       else if (action === "import-save-trigger") document.getElementById("import-save-input").click();
