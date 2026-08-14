@@ -42,6 +42,8 @@ function freshState() {
     watchOrders: [],
     nextWatchOrderAt: null,
     currentCity: "detroit",
+    highestTierSeen: 0,
+    lastSpecialSlotCompleted: null,
   };
 }
 
@@ -73,6 +75,15 @@ function load() {
 
 function addRep(amount) {
   state.rep = Math.max(0, Math.min(MAX_REP, state.rep + amount));
+  const newTierIdx = tierForRep(state.rep);
+  if (newTierIdx > state.highestTierSeen) {
+    for (let i = state.highestTierSeen + 1; i <= newTierIdx; i++) {
+      const bonus = 20000 * i;
+      state.cash += bonus;
+      addLog(`🎖️ PROMOTED TO ${TIERS[i].name} — +${fmt(bonus)} bonus`, "success");
+    }
+    state.highestTierSeen = newTierIdx;
+  }
 }
 
 function addLog(msg, type = "info") {
@@ -176,9 +187,10 @@ function netWorth() {
 function takeContract(contractId) {
   if (state.activeContract) return;
   if (Date.now() < state.burnedUntil) return;
-  const c = CONTRACTS.find((c) => c.id === contractId);
+  const c = findContractById(contractId);
   if (!c) return;
-  if ((c.city || "detroit") !== state.currentCity) return;
+  if (!c.special && (c.city || "detroit") !== state.currentCity) return;
+  if (c.special && state.lastSpecialSlotCompleted === currentSpecialSlot()) return;
   if (currentTierIndex() < c.tier) return;
   if (c.unlockRep && state.rep < c.unlockRep) return;
   state.activeContract = { contractId, startedAt: Date.now(), duration: c.duration * 1000 };
@@ -187,10 +199,14 @@ function takeContract(contractId) {
   render();
 }
 
+function findContractById(id) {
+  return CONTRACTS.find((c) => c.id === id) || SPECIAL_CONTRACTS.find((c) => c.id === id);
+}
+
 function playContract() {
   const ac = state.activeContract;
   if (!ac || !ac.ready) return;
-  const c = CONTRACTS.find((c) => c.id === ac.contractId);
+  const c = findContractById(ac.contractId);
   if (!c) return;
   openMinigameModal(c, (performance) => {
     closeMinigameModal();
@@ -206,7 +222,7 @@ function skipMinigame() {
 function resolveContract(performance) {
   const ac = state.activeContract;
   if (!ac) return;
-  const c = CONTRACTS.find((c) => c.id === ac.contractId);
+  const c = findContractById(ac.contractId);
   if (!c) {
     state.activeContract = null;
     return;
@@ -234,6 +250,7 @@ function resolveContract(performance) {
     state.heat = Math.min(100, state.heat + heatGain);
     state.stats.contractsCompleted++;
     state.stats.totalEarned += payout;
+    if (c.special) state.lastSpecialSlotCompleted = currentSpecialSlot();
     addLog(`✅ ${c.name} complete. +${fmt(payout)}, +${repGain} rep, +${Math.round(heatGain)} heat`, "success");
   } else {
     state.heat = Math.min(100, state.heat + heatGain * 1.5);

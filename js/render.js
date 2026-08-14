@@ -122,14 +122,14 @@ function contractsTabHTML() {
     const remain = Math.ceil((state.burnedUntil - Date.now()) / 1000);
     activeHTML = `<div class="active-contract burned">Lying low... back in ${remain}s</div>`;
   } else if (state.activeContract && state.activeContract.ready) {
-    const c = CONTRACTS.find((c) => c.id === state.activeContract.contractId);
+    const c = findContractById(state.activeContract.contractId);
     activeHTML = `
       <div class="active-contract ready">
         <div class="active-title">Job ready: ${c.name} — finish it to collect</div>
         <button class="btn mg-action" data-action="play-contract">Play Contract</button>
       </div>`;
   } else if (state.activeContract) {
-    const c = CONTRACTS.find((c) => c.id === state.activeContract.contractId);
+    const c = findContractById(state.activeContract.contractId);
     const elapsed = Date.now() - state.activeContract.startedAt;
     const pct = Math.min(100, (elapsed / state.activeContract.duration) * 100);
     const remain = Math.max(0, Math.ceil((state.activeContract.duration - elapsed) / 1000));
@@ -139,6 +139,32 @@ function contractsTabHTML() {
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
       </div>`;
   }
+
+  const special = currentSpecialContract();
+  const specialCompleted = state.lastSpecialSlotCompleted === currentSpecialSlot();
+  const specialRepReq = Math.max(TIERS[special.tier].repReq, special.unlockRep || 0);
+  const specialLocked = special.tier > tierIdx || state.rep < specialRepReq;
+  const specialDisabled = specialLocked || specialCompleted || !!state.activeContract || burned;
+  const specialChance = Math.round(
+    Math.max(0.05, Math.min(0.97, special.baseChance + weaponBonus() - Math.min(state.heat / 250, 0.3))) * 100
+  );
+  const rotationRemain = Math.max(0, (nextSpecialRotationAt() - Date.now()) / 1000);
+  const specialCard = `
+    <div class="card special-contract ${specialLocked ? "locked" : ""} ${specialCompleted ? "owned" : ""}">
+      <div class="card-title">⭐ ${special.name}</div>
+      <div class="card-row">Tier: ${TIERS[special.tier].name}</div>
+      <div class="card-row">Payout: ${fmt(special.payout)}</div>
+      <div class="card-row">Time: ${special.duration}s</div>
+      <div class="card-row">Odds: ${specialChance}% · Heat +${special.heat}</div>
+      <div class="card-row">Rotates in ${formatDuration(rotationRemain)}</div>
+      ${
+        specialCompleted
+          ? `<button class="btn equipped" disabled>Completed — Check Back Later</button>`
+          : specialLocked
+          ? `<div class="locked-tag">Requires ${specialRepReq} rep</div>`
+          : `<button class="btn" data-action="take-contract" data-id="${special.id}" ${specialDisabled ? "disabled" : ""}>Take Special Contract</button>`
+      }
+    </div>`;
 
   const city = CITIES.find((c) => c.id === state.currentCity) || CITIES[0];
   const cityBanner = `<div class="card-row city-banner">📍 Currently in <strong>${city.name}</strong>${city.id !== "detroit" ? ` — <span class="hint" style="display:inline">${city.desc}</span>` : ""}</div>`;
@@ -166,7 +192,7 @@ function contractsTabHTML() {
       </div>`;
   }).join("");
 
-  return `${cityBanner}${activeHTML}<div class="grid">${cards}</div>`;
+  return `${cityBanner}${activeHTML}<h3 class="cat-heading">Special Contract</h3><div class="grid">${specialCard}</div><h3 class="cat-heading">Available</h3><div class="grid">${cards}</div>`;
 }
 
 function arsenalTabHTML() {

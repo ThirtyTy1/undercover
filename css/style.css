@@ -392,6 +392,16 @@ body {
   opacity: 0.5;
 }
 
+.card.special-contract {
+  border-color: var(--neon-gold);
+  box-shadow: 0 0 18px rgba(255, 209, 102, 0.25);
+  background: linear-gradient(160deg, #241d10, #121014);
+}
+.card.special-contract .card-title {
+  color: var(--neon-gold);
+  text-shadow: 0 0 8px rgba(255, 209, 102, 0.5);
+}
+
 .art-box {
   display: flex;
   align-items: center;

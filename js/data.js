@@ -7,6 +7,14 @@ const TIERS = [
   { name: "Legend", repReq: 1000 },
   { name: "Kingmaker", repReq: 1800 },
   { name: "Shadow Don", repReq: 2500 },
+  // Beyond Shadow Don — ranks keep climbing all the way to the rep cap, so there's
+  // always another promotion to chase instead of flatlining for the rest of the game.
+  { name: "Crime Lord", repReq: 6000 },
+  { name: "Underworld Kingpin", repReq: 12000 },
+  { name: "Untouchable", repReq: 25000 },
+  { name: "Ghost Emperor", repReq: 45000 },
+  { name: "Living Legend", repReq: 70000 },
+  { name: "Immortal", repReq: 100000 },
 ];
 
 function tierForRep(rep) {
@@ -84,6 +92,38 @@ const CONTRACTS = [
   { id: "c20", name: "Underground Auction", city: "tokyo", tier: 5, payout: 1400000, rep: 1350, duration: 145, baseChance: 0.19, heat: 74,
     minigame: "pattern", mgTitle: "Bidder's Vault", mgFlavor: "Crack the lot case before the gavel falls." },
 ];
+
+// Rotating special contract — one is always live, and it swaps out for a new one every
+// few days on real-world time, so it's the same target for every player at once (no
+// server needed — the "slot" is just derived from the current date). Pays well above a
+// normal contract at the same tier, and can only be completed once per rotation.
+const SPECIAL_ROTATION_DAYS = 3;
+const SPECIAL_ROTATION_MS = SPECIAL_ROTATION_DAYS * 24 * 60 * 60 * 1000;
+
+const SPECIAL_CONTRACTS = [
+  { id: "sp1", special: true, name: "The Informant's Tip", tier: 0, payout: 1400, rep: 10, duration: 6, baseChance: 0.7, heat: 5,
+    minigame: "reflex", mgTitle: "Burn the Source", mgFlavor: "He's about to talk. Get to him first." },
+  { id: "sp2", special: true, name: "High-Value Target", tier: 1, payout: 10000, rep: 45, duration: 22, baseChance: 0.5, heat: 20,
+    minigame: "pattern", mgTitle: "Breach the Safehouse", mgFlavor: "Every second past the code adds risk." },
+  { id: "sp3", special: true, name: "The Big Score", tier: 2, payout: 68000, rep: 150, duration: 48, baseChance: 0.38, heat: 34,
+    minigame: "timing", mgTitle: "The Exchange", mgFlavor: "One shot to make the handoff clean." },
+  { id: "sp4", special: true, name: "Federal Witness", tier: 3, payout: 380000, rep: 520, duration: 85, baseChance: 0.3, heat: 48,
+    minigame: "reflex", mgTitle: "Silence the Witness", mgFlavor: "The trial starts tomorrow. He doesn't make it." },
+  { id: "sp5", special: true, name: "Rival Family Boss", tier: 4, payout: 1000000, rep: 1000, duration: 105, baseChance: 0.24, heat: 58,
+    minigame: "takedown", mgTitle: "Take the Compound", mgFlavor: "His whole crew is between you and him." },
+  { id: "sp6", special: true, name: "The Ghost Contract", tier: 5, payout: 1600000, rep: 1400, duration: 135, baseChance: 0.2, heat: 70,
+    minigame: "pattern", mgTitle: "No Trace Left", mgFlavor: "Whoever this is, they were never here." },
+];
+
+function currentSpecialSlot() {
+  return Math.floor(Date.now() / SPECIAL_ROTATION_MS);
+}
+function currentSpecialContract() {
+  return SPECIAL_CONTRACTS[currentSpecialSlot() % SPECIAL_CONTRACTS.length];
+}
+function nextSpecialRotationAt() {
+  return (currentSpecialSlot() + 1) * SPECIAL_ROTATION_MS;
+}
 
 const WEAPONS = [
   { id: "w1", name: "Rusty Pistol", cost: 0, bonus: 0.0, repReq: 0, starter: true },
