@@ -309,9 +309,53 @@ function casinoTabHTML() {
       <button class="btn ${casinoView === "blackjack" ? "equipped" : ""}" data-action="casino-view" data-view="blackjack">Blackjack</button>
       <button class="btn ${casinoView === "slots" ? "equipped" : ""}" data-action="casino-view" data-view="slots">Slots</button>
       <button class="btn ${casinoView === "roulette" ? "equipped" : ""}" data-action="casino-view" data-view="roulette">Roulette</button>
+      <button class="btn ${casinoView === "highlow" ? "equipped" : ""}" data-action="casino-view" data-view="highlow">High-Low</button>
     </div>`;
-  const body = casinoView === "blackjack" ? blackjackHTML() : casinoView === "slots" ? slotsHTML() : rouletteHTML();
+  const body =
+    casinoView === "blackjack" ? blackjackHTML() : casinoView === "slots" ? slotsHTML() : casinoView === "highlow" ? highlowHTML() : rouletteHTML();
   return nav + body;
+}
+
+function highlowHTML() {
+  if (!highlowGame) {
+    return `
+      <div class="casino-table">
+        <div class="card-row">Guess higher or lower than the shown card. Each correct guess grows your multiplier — cash out anytime, or bust and lose it all.</div>
+        <div class="crypto-action-group">
+          <button class="btn" data-action="highlow-start" data-amount="100" ${state.cash < 100 ? "disabled" : ""}>Bet ${fmt(100)}</button>
+          <button class="btn" data-action="highlow-start" data-amount="500" ${state.cash < 500 ? "disabled" : ""}>Bet ${fmt(500)}</button>
+          <button class="btn" data-action="highlow-start" data-amount="2000" ${state.cash < 2000 ? "disabled" : ""}>Bet ${fmt(2000)}</button>
+          <button class="btn" data-action="highlow-start" data-amount="10000" ${state.cash < 10000 ? "disabled" : ""}>Bet ${fmt(10000)}</button>
+        </div>
+      </div>`;
+  }
+
+  const playing = highlowGame.phase === "playing";
+  const resultCls = highlowGame.resultText
+    ? highlowGame.resultText.startsWith("Cashed")
+      ? "great"
+      : "fail"
+    : "";
+  const potentialPayout = Math.round(highlowGame.bet * highlowGame.multiplier * HIGHLOW_MULTIPLIER_STEP);
+
+  return `
+    <div class="casino-table">
+      <div class="cat-heading">Streak Multiplier: ${highlowGame.multiplier.toFixed(2)}x</div>
+      <div class="highlow-card">${highlowCardLabel(highlowGame.currentCard)}</div>
+      <div class="card-row">Bet ${fmt(highlowGame.bet)} — cash out now for ${fmt(Math.round(highlowGame.bet * highlowGame.multiplier))}</div>
+      ${highlowGame.resultText ? `<div class="mg-result-text ${resultCls}">${highlowGame.resultText}</div>` : ""}
+      <div class="crypto-action-group">
+        ${
+          playing
+            ? `
+              <button class="btn" data-action="highlow-guess" data-dir="higher">Higher</button>
+              <button class="btn" data-action="highlow-guess" data-dir="lower">Lower</button>
+              <button class="btn sell" data-action="highlow-cashout">Cash Out</button>`
+            : `<button class="btn" data-action="highlow-new">New Round</button>`
+        }
+      </div>
+      ${playing ? `<div class="hint">Next correct guess pays ${fmt(potentialPayout)} if you keep going.</div>` : ""}
+    </div>`;
 }
 
 function blackjackHTML() {
@@ -556,14 +600,14 @@ function profileTabHTML() {
     })
     .join("");
 
-  const ownedFlexHTML = state.ownedFlex
-    .map((id) => {
-      let item = null;
-      for (const cat of Object.values(FLEX_ITEMS)) {
-        const found = cat.find((i) => i.id === id);
-        if (found) item = found;
-      }
-      return item ? `<div class="owned-item">${itemArtSVG(id, 40)}<span>${item.name}</span></div>` : "";
+  const FLEX_CAT_LABELS = { cars: "Cars", jets: "Jets", watches: "Watches", necklaces: "Necklaces", clothes: "Clothes" };
+  const ownedFlexByCategoryHTML = Object.entries(FLEX_ITEMS)
+    .map(([key, items]) => {
+      const ownedInCat = items.filter((i) => state.ownedFlex.includes(i.id));
+      const grid = ownedInCat.length
+        ? ownedInCat.map((item) => `<div class="owned-item">${itemArtSVG(item.id, 40)}<span>${item.name}</span></div>`).join("")
+        : `<div class="card-row">None owned yet.</div>`;
+      return `<h3 class="cat-heading">${FLEX_CAT_LABELS[key] || key} (${ownedInCat.length}/${items.length})</h3><div class="owned-grid">${grid}</div>`;
     })
     .join("");
 
@@ -619,8 +663,7 @@ function profileTabHTML() {
     <h3 class="cat-heading">Arsenal Owned (${state.ownedWeapons.length})</h3>
     <div class="owned-grid">${ownedWeaponsHTML}</div>
 
-    <h3 class="cat-heading">Flex Owned (${state.ownedFlex.length})</h3>
-    <div class="owned-grid">${ownedFlexHTML || '<div class="card-row">Nothing yet.</div>'}</div>
+    ${ownedFlexByCategoryHTML}
 
     <h3 class="cat-heading">Product on Hand</h3>
     <div class="card-row">${DRUGS.map((d) => `${d.name}: ${state.drugInventory[d.id] || 0} ${d.unit}${(state.drugInventory[d.id] || 0) === 1 ? "" : "s"}`).join(" · ")}</div>
@@ -850,6 +893,10 @@ function bindTabEvents() {
       else if (action === "roulette-select") selectRouletteBet(btn.dataset.type, btn.dataset.number);
       else if (action === "roulette-clear") clearRouletteBet();
       else if (action === "roulette-spin") spinRoulette(Number(btn.dataset.amount));
+      else if (action === "highlow-start") startHighlow(Number(btn.dataset.amount));
+      else if (action === "highlow-guess") highlowGuess(btn.dataset.dir);
+      else if (action === "highlow-cashout") highlowCashOut();
+      else if (action === "highlow-new") highlowNewRound();
     });
   });
 

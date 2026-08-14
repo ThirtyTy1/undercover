@@ -526,6 +526,8 @@ const ITEM_PHOTO = {
   w5: "assets/items/w5.jpg",
   w7: "assets/items/w7.webp",
   w6: "assets/items/rifle.webp",
+  w8: "assets/items/w5.jpg",
+  w9: "assets/items/rifle.webp",
   watch1: "assets/items/watch1.webp",
   watch2: "assets/items/watch2.webp",
   watch3: "assets/items/watch3.webp",

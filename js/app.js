@@ -224,7 +224,7 @@ function resolveContract(performance) {
   const heatPenalty = Math.min(state.heat / 250, 0.3); // high heat hurts odds
   const chanceBonus = (performance - 0.5) * 0.4; // mini-game performance: -0.2 to +0.2
   const crewBonus = state.phone.nextJobBonus || 0;
-  const chance = Math.max(0.05, Math.min(0.97, c.baseChance + weaponBonus() - heatPenalty + chanceBonus + crewBonus));
+  const chance = Math.max(0.05, Math.min(0.97, c.baseChance + weaponBonus() - heatPenalty + chanceBonus + crewBonus + businessPerk("oddsBoost")));
   const success = Math.random() < chance;
   if (crewBonus > 0) {
     addLog(`Crew's backup paid off: +${Math.round(crewBonus * 100)}% odds`, "buy");
@@ -334,6 +334,7 @@ function sellWeapon(id) {
 function flexPrice(item, categoryName) {
   let discount = businessPerk("flexDiscount");
   if (categoryName === "cars") discount = 1 - (1 - discount) * (1 - businessPerk("carDiscount"));
+  if (categoryName === "jets") discount = 1 - (1 - discount) * (1 - businessPerk("jetDiscount"));
   return Math.round(item.cost * (1 - discount));
 }
 
@@ -863,6 +864,71 @@ function resolveSlots(reels, bet) {
   state.cash += payout;
   addLog(`Slots: ${slotGame.resultText}`, payout > bet ? "success" : payout > 0 ? "info" : "fail");
   save();
+  render();
+}
+
+// ---------- High-Low ----------
+
+let highlowGame = null; // { bet, currentCard, multiplier, phase: 'playing'|'done', resultText }
+
+function highlowDrawCard() {
+  return 2 + Math.floor(Math.random() * 13); // 2..14 (14 = Ace)
+}
+function highlowCardLabel(v) {
+  if (v === 14) return "A";
+  if (v === 13) return "K";
+  if (v === 12) return "Q";
+  if (v === 11) return "J";
+  return String(v);
+}
+
+function startHighlow(bet) {
+  bet = Math.floor(Math.min(bet, state.cash));
+  if (bet <= 0 || (highlowGame && highlowGame.phase === "playing")) return;
+  state.cash -= bet;
+  highlowGame = { bet, currentCard: highlowDrawCard(), multiplier: 1, phase: "playing", resultText: null };
+  save();
+  render();
+}
+
+function highlowGuess(direction) {
+  if (!highlowGame || highlowGame.phase !== "playing") return;
+  const next = highlowDrawCard();
+  if (next === highlowGame.currentCard) {
+    highlowGame.currentCard = next;
+    addLog(`High-Low: push, drew another ${highlowCardLabel(next)}`, "info");
+    save();
+    render();
+    return;
+  }
+  const won = direction === "higher" ? next > highlowGame.currentCard : next < highlowGame.currentCard;
+  highlowGame.currentCard = next;
+  if (won) {
+    highlowGame.multiplier *= HIGHLOW_MULTIPLIER_STEP;
+    save();
+    render();
+  } else {
+    highlowGame.phase = "done";
+    highlowGame.resultText = `Wrong — lost ${fmt(highlowGame.bet)}`;
+    addLog(`High-Low: busted at ${highlowGame.multiplier.toFixed(2)}x — lost ${fmt(highlowGame.bet)}`, "fail");
+    save();
+    render();
+  }
+}
+
+function highlowCashOut() {
+  if (!highlowGame || highlowGame.phase !== "playing") return;
+  const payout = Math.round(highlowGame.bet * highlowGame.multiplier);
+  state.cash += payout;
+  highlowGame.phase = "done";
+  highlowGame.resultText = `Cashed out at ${highlowGame.multiplier.toFixed(2)}x — +${fmt(payout - highlowGame.bet)}`;
+  addLog(`High-Low: ${highlowGame.resultText}`, "success");
+  save();
+  render();
+}
+
+function highlowNewRound() {
+  highlowGame = null;
   render();
 }
 

@@ -40,7 +40,7 @@ const CITIES = [
   { id: "miami", name: "Miami", desc: "Luxury nightlife, yachts, and cartel money.", requiresJet: true },
   { id: "tokyo", name: "Tokyo", desc: "A high-end underground market most crews never see.", requiresJet: true },
 ];
-const TRAVEL_COST = 5000;
+const TRAVEL_COST = 8000;
 
 const CONTRACTS = [
   // Tier 0 - Street Hitter
@@ -94,11 +94,11 @@ const CONTRACTS = [
 ];
 
 // Rotating special contract — one is always live, and it swaps out for a new one every
-// few days on real-world time, so it's the same target for every player at once (no
+// few hours on real-world time, so it's the same target for every player at once (no
 // server needed — the "slot" is just derived from the current date). Pays well above a
 // normal contract at the same tier, and can only be completed once per rotation.
-const SPECIAL_ROTATION_DAYS = 3;
-const SPECIAL_ROTATION_MS = SPECIAL_ROTATION_DAYS * 24 * 60 * 60 * 1000;
+const SPECIAL_ROTATION_HOURS = 6;
+const SPECIAL_ROTATION_MS = SPECIAL_ROTATION_HOURS * 60 * 60 * 1000;
 
 const SPECIAL_CONTRACTS = [
   { id: "sp1", special: true, name: "The Informant's Tip", tier: 0, payout: 1400, rep: 10, duration: 6, baseChance: 0.7, heat: 5,
@@ -166,12 +166,14 @@ function currentCityContracts(cityId) {
 
 const WEAPONS = [
   { id: "w1", name: "Rusty Pistol", cost: 0, bonus: 0.0, repReq: 0, starter: true },
-  { id: "w2", name: "Suppressed 9mm", cost: 1700, bonus: 0.08, repReq: 0 },
-  { id: "w3", name: "Combat Shotgun", cost: 2800, bonus: 0.15, repReq: 100 },
-  { id: "w4", name: "Tactical SMG", cost: 6700, bonus: 0.2, repReq: 100 },
-  { id: "w5", name: "Sniper Rifle", cost: 17000, bonus: 0.28, repReq: 400 },
-  { id: "w6", name: "Custom AR-15", cost: 39000, bonus: 0.35, repReq: 400 },
-  { id: "w7", name: "Twin Golden Deagles", cost: 90000, bonus: 0.45, repReq: 1000 },
+  { id: "w2", name: "Suppressed 9mm", cost: 2000, bonus: 0.08, repReq: 0 },
+  { id: "w3", name: "Combat Shotgun", cost: 3400, bonus: 0.15, repReq: 100 },
+  { id: "w4", name: "Tactical SMG", cost: 8000, bonus: 0.2, repReq: 100 },
+  { id: "w5", name: "Sniper Rifle", cost: 20000, bonus: 0.28, repReq: 400 },
+  { id: "w6", name: "Custom AR-15", cost: 47000, bonus: 0.35, repReq: 400 },
+  { id: "w7", name: "Twin Golden Deagles", cost: 108000, bonus: 0.45, repReq: 1000 },
+  { id: "w8", name: "Armor-Piercing Rifle", cost: 150000, bonus: 0.55, repReq: 1800 },
+  { id: "w9", name: "Prototype Railgun", cost: 300000, bonus: 0.65, repReq: 2500 },
 ];
 
 const FLEX_ITEMS = {
@@ -200,19 +202,19 @@ const FLEX_ITEMS = {
     { id: "jet1", name: "Gulfstream G700", cost: 55000000, heatReduction: 0.22, payoutBoost: 0.19 },
   ],
   watches: [
-    { id: "watch1", name: "Steel Watch", cost: 170, repBoost: 0.02, payoutBoost: 0 },
-    { id: "watch2", name: "Gold Watch", cost: 450, repBoost: 0.04, payoutBoost: 0 },
-    { id: "watch6", name: "Chronograph", cost: 6700, repBoost: 0.05, payoutBoost: 0.01 },
-    { id: "watch10", name: "Two-Tone Datejust", cost: 11000, repBoost: 0.055, payoutBoost: 0.015 },
-    { id: "watch7", name: "Dive Watch", cost: 15500, repBoost: 0.06, payoutBoost: 0.02 },
-    { id: "watch3", name: "Diamond Rolex", cost: 39000, repBoost: 0.07, payoutBoost: 0.03 },
-    { id: "watch8", name: "Royal Oak", cost: 50000, repBoost: 0.08, payoutBoost: 0.035 },
-    { id: "watch9", name: "Nautilus", cost: 135000, repBoost: 0.09, payoutBoost: 0.045 },
-    { id: "watch11", name: "RM Carbon Skeleton", cost: 200000, repBoost: 0.095, payoutBoost: 0.048 },
-    { id: "watch4", name: "Patek Philippe", cost: 280000, repBoost: 0.1, payoutBoost: 0.05 },
-    { id: "watch5", name: "Iced Richard Mille", cost: 675000, repBoost: 0.15, payoutBoost: 0.08 },
-    { id: "watch12", name: "RM Tourbillon", cost: 950000, repBoost: 0.17, payoutBoost: 0.09 },
-    { id: "watch13", name: "RM Skull Edition", cost: 1350000, repBoost: 0.2, payoutBoost: 0.1 },
+    { id: "watch1", name: "Steel Watch", cost: 220, repBoost: 0.02, payoutBoost: 0 },
+    { id: "watch2", name: "Gold Watch", cost: 585, repBoost: 0.04, payoutBoost: 0 },
+    { id: "watch6", name: "Chronograph", cost: 8700, repBoost: 0.05, payoutBoost: 0.01 },
+    { id: "watch10", name: "Two-Tone Datejust", cost: 14300, repBoost: 0.055, payoutBoost: 0.015 },
+    { id: "watch7", name: "Dive Watch", cost: 20150, repBoost: 0.06, payoutBoost: 0.02 },
+    { id: "watch3", name: "Diamond Rolex", cost: 50700, repBoost: 0.07, payoutBoost: 0.03 },
+    { id: "watch8", name: "Royal Oak", cost: 65000, repBoost: 0.08, payoutBoost: 0.035 },
+    { id: "watch9", name: "Nautilus", cost: 175500, repBoost: 0.09, payoutBoost: 0.045 },
+    { id: "watch11", name: "RM Carbon Skeleton", cost: 260000, repBoost: 0.095, payoutBoost: 0.048 },
+    { id: "watch4", name: "Patek Philippe", cost: 364000, repBoost: 0.1, payoutBoost: 0.05 },
+    { id: "watch5", name: "Iced Richard Mille", cost: 877500, repBoost: 0.15, payoutBoost: 0.08 },
+    { id: "watch12", name: "RM Tourbillon", cost: 1235000, repBoost: 0.17, payoutBoost: 0.09 },
+    { id: "watch13", name: "RM Skull Edition", cost: 1755000, repBoost: 0.2, payoutBoost: 0.1 },
   ],
   necklaces: [
     { id: "neck1", name: "Silver Chain", cost: 300, heatReduction: 0.01, repBoost: 0 },
@@ -262,9 +264,9 @@ const HOUSES = {
 };
 
 const LAYLOW_ACTIONS = [
-  { id: "ll1", name: "Quick Lay Low", desc: "Lie low for a bit, let things cool off.", cost: 500, heatRemoved: 10 },
-  { id: "ll2", name: "Safehouse", desc: "Hole up somewhere off the grid.", cost: 3500, heatRemoved: 30 },
-  { id: "ll3", name: "Full Blackout", desc: "Disappear completely for a while.", cost: 18000, heatRemoved: 70 },
+  { id: "ll1", name: "Quick Lay Low", desc: "Lie low for a bit, let things cool off.", cost: 725, heatRemoved: 10 },
+  { id: "ll2", name: "Safehouse", desc: "Hole up somewhere off the grid.", cost: 5075, heatRemoved: 30 },
+  { id: "ll3", name: "Full Blackout", desc: "Disappear completely for a while.", cost: 26100, heatRemoved: 70 },
 ];
 
 // Agents work contracts on your behalf while you stay out of sight.
@@ -336,6 +338,10 @@ const ROULETTE_OUTSIDE_BETS = [
 ];
 const ROULETTE_STRAIGHT_MULT = 36;
 
+// Casino: High-Low card climb — guess higher or lower than the shown card, each
+// correct guess grows the multiplier, cash out anytime or bust and lose it all.
+const HIGHLOW_MULTIPLIER_STEP = 1.6;
+
 // Businesses: one-time purchases, own or don't. Passive income plus a real perk.
 const BUSINESS_CYCLE_SECONDS = 60;
 
@@ -345,7 +351,7 @@ const BUSINESSES = [
     name: "Gun Store",
     desc: "A legit storefront moving legal firearms up top.",
     cost: 150000,
-    income: 2000,
+    income: 3000,
     heatReduction: 0.03,
     perk: "weaponDiscount",
     perkAmount: 0.1,
@@ -357,7 +363,7 @@ const BUSINESSES = [
     name: "Watch Store",
     desc: "High-end timepieces, chains, and clothes on consignment.",
     cost: 200000,
-    income: 2500,
+    income: 3800,
     heatReduction: 0.03,
     perk: "flexDiscount",
     perkAmount: 0.1,
@@ -369,7 +375,7 @@ const BUSINESSES = [
     name: "Recruit Agency",
     desc: "A staffing office that quietly screens new talent for you.",
     cost: 250000,
-    income: 3000,
+    income: 4500,
     heatReduction: 0.04,
     perk: "agentDiscount",
     perkAmount: 0.15,
@@ -381,7 +387,7 @@ const BUSINESSES = [
     name: "Car Dealership",
     desc: "Moves cars on the lot — and off the books.",
     cost: 400000,
-    income: 4000,
+    income: 6000,
     heatReduction: 0.04,
     perk: "carDiscount",
     perkAmount: 0.15,
@@ -393,12 +399,36 @@ const BUSINESSES = [
     name: "Real Estate Office",
     desc: "Buys and flips property — including your own.",
     cost: 1000000,
-    income: 10000,
+    income: 15000,
     heatReduction: 0.06,
     perk: "houseDiscount",
     perkAmount: 0.1,
     perkLabel: "-10% house prices",
     repReq: 1000,
+  },
+  {
+    id: "importexport",
+    name: "Import/Export Front",
+    desc: "Shell company that moves anything — including jets — without questions.",
+    cost: 2000000,
+    income: 15000,
+    heatReduction: 0.06,
+    perk: "jetDiscount",
+    perkAmount: 0.15,
+    perkLabel: "-15% jet prices",
+    repReq: 1400,
+  },
+  {
+    id: "security",
+    name: "Private Security Firm",
+    desc: "Muscle on retainer — fewer things go wrong out there.",
+    cost: 3000000,
+    income: 20000,
+    heatReduction: 0.07,
+    perk: "oddsBoost",
+    perkAmount: 0.05,
+    perkLabel: "+5% contract success odds",
+    repReq: 1800,
   },
 ];
 
@@ -418,8 +448,8 @@ const DRUG_REQUEST_QTY_RANGE = {
 };
 
 const DRUG_REQUEST_EXPIRE_SECONDS = 180;
-const DRUG_REQUEST_MIN_GAP_SECONDS = 30;
-const DRUG_REQUEST_MAX_GAP_SECONDS = 60;
+const DRUG_REQUEST_MIN_GAP_SECONDS = 21;
+const DRUG_REQUEST_MAX_GAP_SECONDS = 42;
 const DRUG_REQUEST_BASE_PENDING = 3;
 const DRUG_REQUEST_MAX_PENDING_CAP = 8;
 
@@ -437,8 +467,8 @@ const GUN_ORDER_QTY_RANGE = {
   sniper: [1, 2],
 };
 const GUN_ORDER_EXPIRE_SECONDS = 180;
-const GUN_ORDER_MIN_GAP_SECONDS = 35;
-const GUN_ORDER_MAX_GAP_SECONDS = 70;
+const GUN_ORDER_MIN_GAP_SECONDS = 52;
+const GUN_ORDER_MAX_GAP_SECONDS = 105;
 const GUN_ORDER_BASE_PENDING = 3;
 const GUN_ORDER_MAX_PENDING_CAP = 8;
 const GUN_COUNTER_OPTIONS = [
@@ -462,8 +492,8 @@ const WATCH_ORDER_QTY_RANGE = {
   watchiced: [1, 1],
 };
 const WATCH_ORDER_EXPIRE_SECONDS = 180;
-const WATCH_ORDER_MIN_GAP_SECONDS = 32;
-const WATCH_ORDER_MAX_GAP_SECONDS = 65;
+const WATCH_ORDER_MIN_GAP_SECONDS = 48;
+const WATCH_ORDER_MAX_GAP_SECONDS = 98;
 const WATCH_ORDER_BASE_PENDING = 3;
 const WATCH_ORDER_MAX_PENDING_CAP = 8;
 const WATCH_COUNTER_OPTIONS = [
