@@ -168,8 +168,9 @@ function contractsTabHTML() {
 
   const city = CITIES.find((c) => c.id === state.currentCity) || CITIES[0];
   const cityBanner = `<div class="card-row city-banner">📍 Currently in <strong>${city.name}</strong>${city.id !== "detroit" ? ` — <span class="hint" style="display:inline">${city.desc}</span>` : ""}</div>`;
+  const normalRotationRemain = Math.max(0, (nextNormalRotationAt() - Date.now()) / 1000);
 
-  const cityContracts = CONTRACTS.filter((c) => (c.city || "detroit") === state.currentCity);
+  const cityContracts = currentCityContracts(state.currentCity);
   const cards = cityContracts.map((c) => {
     const repReq = Math.max(TIERS[c.tier].repReq, c.unlockRep || 0);
     const locked = c.tier > tierIdx || state.rep < repReq;
@@ -192,7 +193,7 @@ function contractsTabHTML() {
       </div>`;
   }).join("");
 
-  return `${cityBanner}${activeHTML}<h3 class="cat-heading">Special Contract</h3><div class="grid">${specialCard}</div><h3 class="cat-heading">Available</h3><div class="grid">${cards}</div>`;
+  return `${cityBanner}${activeHTML}<h3 class="cat-heading">Special Contract</h3><div class="grid">${specialCard}</div><h3 class="cat-heading">Available — new targets in ${formatDuration(normalRotationRemain)}</h3><div class="grid">${cards}</div>`;
 }
 
 function arsenalTabHTML() {

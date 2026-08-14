@@ -189,7 +189,10 @@ function takeContract(contractId) {
   if (Date.now() < state.burnedUntil) return;
   const c = findContractById(contractId);
   if (!c) return;
-  if (!c.special && (c.city || "detroit") !== state.currentCity) return;
+  if (!c.special) {
+    if ((c.city || "detroit") !== state.currentCity) return;
+    if (!currentCityContracts(state.currentCity).some((v) => v.id === c.id)) return;
+  }
   if (c.special && state.lastSpecialSlotCompleted === currentSpecialSlot()) return;
   if (currentTierIndex() < c.tier) return;
   if (c.unlockRep && state.rep < c.unlockRep) return;

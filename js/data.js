@@ -125,6 +125,45 @@ function nextSpecialRotationAt() {
   return (currentSpecialSlot() + 1) * SPECIAL_ROTATION_MS;
 }
 
+// Normal contracts rotate too — only 3 are on offer per city at a time, swapping to a
+// different 3 every 45 minutes. Same trick as the special contract: which 3 show up is
+// derived deterministically from the current time (+ city), so every player sees the
+// same rotation with no server needed, and it's stable for the full 45-minute window.
+const NORMAL_ROTATION_MINUTES = 45;
+const NORMAL_ROTATION_MS = NORMAL_ROTATION_MINUTES * 60 * 1000;
+const NORMAL_ROTATION_COUNT = 3;
+
+function normalRotationSlot() {
+  return Math.floor(Date.now() / NORMAL_ROTATION_MS);
+}
+function nextNormalRotationAt() {
+  return (normalRotationSlot() + 1) * NORMAL_ROTATION_MS;
+}
+function hashStringToInt(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function seededRng(seed) {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  return function () {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+function currentCityContracts(cityId) {
+  const pool = CONTRACTS.filter((c) => (c.city || "detroit") === cityId);
+  const seed = normalRotationSlot() * 7919 + hashStringToInt(cityId) + 1;
+  const rng = seededRng(seed);
+  const shuffled = pool.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, Math.min(NORMAL_ROTATION_COUNT, shuffled.length));
+}
+
 const WEAPONS = [
   { id: "w1", name: "Rusty Pistol", cost: 0, bonus: 0.0, repReq: 0, starter: true },
   { id: "w2", name: "Suppressed 9mm", cost: 1700, bonus: 0.08, repReq: 0 },
