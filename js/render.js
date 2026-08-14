@@ -908,10 +908,25 @@ function openMinigameModal(contract, onDone) {
   document.getElementById("mg-title").textContent = contract.mgTitle;
   document.getElementById("mg-flavor").textContent = contract.mgFlavor;
   document.getElementById("minigame-overlay").classList.remove("hidden");
+
+  const weapon = WEAPONS.find((w) => w.id === state.equippedWeapon);
+  document.getElementById("mg-loadout").innerHTML = weapon
+    ? `
+      <div class="art-box mg-loadout-art">${itemArtSVG(weapon.id, 34)}</div>
+      <div class="mg-loadout-text">
+        <div class="mg-loadout-label">Armed With</div>
+        <div class="mg-loadout-name">${weapon.name}</div>
+      </div>
+      <div class="mg-loadout-bonus">+${Math.round(weapon.bonus * 100)}%</div>`
+    : "";
+
   const body = document.getElementById("mg-body");
   body.innerHTML = "";
   window.__mgDone = onDone;
+  window.__mgSession = (window.__mgSession || 0) + 1;
+  const session = window.__mgSession;
   startMinigame(contract, body, (perf) => {
+    if (session !== window.__mgSession) return; // an abandoned/skipped minigame finishing late — ignore it
     if (window.__mgDone) {
       const done = window.__mgDone;
       window.__mgDone = null;
@@ -921,6 +936,7 @@ function openMinigameModal(contract, onDone) {
 }
 
 function closeMinigameModal() {
+  window.__mgSession = (window.__mgSession || 0) + 1;
   document.getElementById("minigame-overlay").classList.add("hidden");
   document.getElementById("mg-body").innerHTML = "";
   window.__mgDone = null;

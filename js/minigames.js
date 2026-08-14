@@ -13,6 +13,23 @@ function mgResultText(container, text, cls) {
   container.appendChild(el);
 }
 
+// Shared enemy silhouette used by the shooting mini-games (reflex, takedown)
+// so the player is visibly firing on a person, not an abstract shape.
+const ENEMY_SILHOUETTE_SVG = `
+  <svg viewBox="0 0 100 100" class="mg-target-svg">
+    <circle cx="50" cy="26" r="16" />
+    <path d="M22,96 Q22,52 50,52 Q78,52 78,96 Z" />
+  </svg>`;
+
+function spawnMuzzleFlash(container, x, y) {
+  const flash = document.createElement("div");
+  flash.className = "mg-muzzle-flash";
+  flash.style.left = x + "px";
+  flash.style.top = y + "px";
+  container.appendChild(flash);
+  setTimeout(() => flash.remove(), 260);
+}
+
 // ---------- Timing bar ----------
 
 function playTiming(container, tier, onDone) {
@@ -74,8 +91,14 @@ function playReflex(container, tier, onDone) {
     [200, 340, 520],
   ][tier];
 
-  container.innerHTML = `<div class="mg-reflex-box" id="mg-box">WAIT...</div>`;
+  container.innerHTML = `
+    <div class="mg-reflex-box" id="mg-box">
+      <div class="mg-target-body mg-reflex-figure" id="mg-figure">${ENEMY_SILHOUETTE_SVG}</div>
+      <div class="mg-reflex-label" id="mg-label">STAY HIDDEN...</div>
+    </div>`;
   const box = container.querySelector("#mg-box");
+  const figure = container.querySelector("#mg-figure");
+  const label = container.querySelector("#mg-label");
   let flipped = false;
   let flipTime = 0;
   let done = false;
@@ -84,7 +107,7 @@ function playReflex(container, tier, onDone) {
   const timer = setTimeout(() => {
     flipped = true;
     flipTime = performance.now();
-    box.textContent = "STRIKE NOW";
+    label.textContent = "HE'S TURNED — FIRE!";
     box.classList.add("mg-reflex-go");
   }, delay);
 
@@ -97,20 +120,26 @@ function playReflex(container, tier, onDone) {
       setTimeout(() => onDone(0), 700);
       return;
     }
+    const rect = figure.getBoundingClientRect();
+    const boxRect = box.getBoundingClientRect();
+    spawnMuzzleFlash(box, rect.left - boxRect.left + rect.width / 2, rect.top - boxRect.top + rect.height / 2);
     const reaction = performance.now() - flipTime;
     let perf;
     if (reaction <= thresholds[0]) {
       perf = 1;
-      mgResultText(container, "LIGHTNING FAST", "great");
+      figure.classList.add("mg-target-down");
+      mgResultText(container, "LIGHTNING FAST — ONE SHOT", "great");
     } else if (reaction <= thresholds[1]) {
       perf = 0.7;
+      figure.classList.add("mg-target-down");
       mgResultText(container, "CLEAN HIT", "good");
     } else if (reaction <= thresholds[2]) {
       perf = 0.4;
-      mgResultText(container, "SLOW", "ok");
+      figure.classList.add("mg-target-down");
+      mgResultText(container, "SLOW — HE ALMOST GOT AWAY", "ok");
     } else {
       perf = 0.15;
-      mgResultText(container, "TOO SLOW", "fail");
+      mgResultText(container, "TOO SLOW — HE'S RUNNING", "fail");
     }
     setTimeout(() => onDone(perf), 700);
   });
@@ -179,14 +208,14 @@ function playPattern(container, tier, onDone) {
 
 // ---------- Multi-target takedown ----------
 
-function playTakedown(container, tier, onDone) {
+function playTakedown(container, tier, onDone, session) {
   const total = [5, 6, 7, 8, 9, 10][tier];
   const visibleMs = [900, 780, 650, 550, 480, 420][tier];
   const gapMs = [350, 300, 260, 220, 190, 170][tier];
 
   container.innerHTML = `
     <div class="mg-takedown-field" id="mg-field"></div>
-    <div class="mg-pattern-status" id="mg-status">Targets: 0 / ${total}</div>
+    <div class="mg-pattern-status" id="mg-status">Down: 0 / ${total}</div>
   `;
   const field = container.querySelector("#mg-field");
   const status = container.querySelector("#mg-status");
@@ -194,6 +223,7 @@ function playTakedown(container, tier, onDone) {
   let spawned = 0;
 
   function spawnOne() {
+    if (mgStale(session)) return; // this session was skipped/replaced — stop touching shared DOM/state
     if (spawned >= total) {
       setTimeout(() => {
         const perf = hits / total;
@@ -205,6 +235,7 @@ function playTakedown(container, tier, onDone) {
     spawned++;
     const target = document.createElement("div");
     target.className = "mg-target";
+    target.innerHTML = ENEMY_SILHOUETTE_SVG;
     const fw = field.clientWidth - 44;
     const fh = field.clientHeight - 44;
     target.style.left = Math.random() * Math.max(fw, 10) + "px";
@@ -214,8 +245,10 @@ function playTakedown(container, tier, onDone) {
       if (hit) return;
       hit = true;
       hits++;
-      status.textContent = `Targets: ${hits} / ${total}`;
-      target.remove();
+      status.textContent = `Down: ${hits} / ${total}`;
+      spawnMuzzleFlash(field, target.offsetLeft + 22, target.offsetTop + 22);
+      target.classList.add("mg-target-down");
+      setTimeout(() => target.remove(), 160);
     });
     field.appendChild(target);
     setTimeout(() => {
@@ -233,11 +266,15 @@ const MINIGAME_PLAYERS = {
   takedown: playTakedown,
 };
 
+function mgStale(session) {
+  return session !== window.__mgSession;
+}
+
 function startMinigame(contract, container, onDone) {
   const player = MINIGAME_PLAYERS[contract.minigame];
   if (!player) {
     onDone(0.5);
     return;
   }
-  player(container, contract.tier, onDone);
+  player(container, contract.tier, onDone, window.__mgSession);
 }
