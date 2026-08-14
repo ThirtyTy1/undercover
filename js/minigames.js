@@ -13,8 +13,8 @@ function mgResultText(container, text, cls) {
   container.appendChild(el);
 }
 
-// Shared enemy silhouette used by the shooting mini-games (reflex, takedown)
-// so the player is visibly firing on a person, not an abstract shape.
+// Shared enemy silhouette used by the shooting mini-games so the player is
+// visibly firing on a person, not an abstract shape.
 const ENEMY_SILHOUETTE_SVG = `
   <svg viewBox="0 0 100 100" class="mg-target-svg">
     <circle cx="50" cy="26" r="16" />
@@ -30,209 +30,257 @@ function spawnMuzzleFlash(container, x, y) {
   setTimeout(() => flash.remove(), 260);
 }
 
-// ---------- Timing bar ----------
+function mgStale(session) {
+  return session !== window.__mgSession;
+}
 
-function playTiming(container, tier, onDone) {
-  const zoneWidth = [30, 24, 18, 14, 11, 9][tier];
-  const loopMs = [1400, 1150, 950, 800, 700, 600][tier];
-  const zoneLeft = 50 - zoneWidth / 2;
+// ---------- Charge & release ----------
+// Hold to charge a power meter, release inside the gold zone. Too early = weak
+// hit, too late = misfire. Rewards feel (press-hold-release) instead of a click.
+
+function playCharge(container, tier, onDone, session) {
+  const zoneStart = [66, 70, 73, 76, 79, 82][tier];
+  const zoneEnd = [96, 95, 94, 93, 92, 91][tier];
+  const fillPctPerSec = [130, 145, 160, 175, 190, 205][tier];
 
   container.innerHTML = `
-    <div class="mg-timing-track">
-      <div class="mg-timing-zone" style="left:${zoneLeft}%;width:${zoneWidth}%"></div>
-      <div class="mg-timing-marker" id="mg-marker"></div>
+    <div class="mg-charge-track">
+      <div class="mg-charge-zone" style="bottom:${zoneStart}%;height:${zoneEnd - zoneStart}%"></div>
+      <div class="mg-charge-fill" id="mg-fill"></div>
     </div>
-    <button class="btn mg-action" id="mg-strike">STRIKE</button>
+    <button class="btn mg-action" id="mg-hold">HOLD TO CHARGE</button>
   `;
-
-  const marker = container.querySelector("#mg-marker");
-  marker.style.left = "0%";
-  const startTime = performance.now();
-  let raf = null;
+  const fill = container.querySelector("#mg-fill");
+  const btn = container.querySelector("#mg-hold");
+  let pct = 0;
+  let holding = false;
   let done = false;
+  let raf = null;
+  let startT = 0;
 
   function tick(now) {
-    const elapsed = (now - startTime) % (loopMs * 2);
-    const pct = elapsed < loopMs ? (elapsed / loopMs) * 100 : 100 - ((elapsed - loopMs) / loopMs) * 100;
-    marker.style.left = pct + "%";
-    if (!done) raf = requestAnimationFrame(tick);
-  }
-  raf = requestAnimationFrame(tick);
-
-  container.querySelector("#mg-strike").addEventListener("click", () => {
-    if (done) return;
-    done = true;
-    cancelAnimationFrame(raf);
-    const markerPct = parseFloat(marker.style.left);
-    const dist = Math.abs(markerPct - 50);
-    const halfZone = zoneWidth / 2;
-    let perf;
-    if (dist <= halfZone) {
-      perf = clamp01(1 - dist / halfZone);
-      mgResultText(container, perf > 0.75 ? "PERFECT TIMING" : "SOLID HIT", perf > 0.75 ? "great" : "good");
-    } else {
-      perf = clamp01(0.35 - (dist - halfZone) / 100);
-      mgResultText(container, "MISTIMED", "fail");
+    if (mgStale(session) || done) return;
+    if (!holding) return;
+    pct = Math.min(102, ((now - startT) / 1000) * fillPctPerSec);
+    fill.style.height = Math.min(100, pct) + "%";
+    if (pct >= 102) {
+      release();
+      return;
     }
-    container.querySelector("#mg-strike").disabled = true;
+    raf = requestAnimationFrame(tick);
+  }
+
+  function startHold(e) {
+    if (done || holding) return;
+    e.preventDefault && e.preventDefault();
+    holding = true;
+    startT = performance.now();
+    raf = requestAnimationFrame(tick);
+  }
+
+  function release() {
+    if (done || !holding) return;
+    holding = false;
+    done = true;
+    if (raf) cancelAnimationFrame(raf);
+    btn.disabled = true;
+    let perf;
+    if (pct >= zoneStart && pct <= zoneEnd) {
+      const center = (zoneStart + zoneEnd) / 2;
+      perf = clamp01(1 - Math.abs(pct - center) / ((zoneEnd - zoneStart) / 2));
+      mgResultText(container, perf > 0.75 ? "PERFECT SHOT" : "SOLID HIT", perf > 0.75 ? "great" : "good");
+    } else if (pct < zoneStart) {
+      perf = clamp01(0.3 * (pct / zoneStart));
+      mgResultText(container, "UNDERCHARGED", "fail");
+    } else {
+      perf = clamp01(0.3 - (pct - zoneEnd) / 40);
+      mgResultText(container, "OVERCHARGED — MISFIRE", "fail");
+    }
     setTimeout(() => onDone(perf), 700);
-  });
+  }
+
+  btn.addEventListener("mousedown", startHold);
+  btn.addEventListener("touchstart", startHold, { passive: false });
+  btn.addEventListener("mouseup", release);
+  btn.addEventListener("touchend", release);
 }
 
-// ---------- Reflex click ----------
+// ---------- Drag to target ----------
+// Drag a reticle across the field and let go on the mark. Precision-by-distance,
+// with a totally different input (press-drag-release) from anything else here.
 
-function playReflex(container, tier, onDone) {
-  const thresholds = [
-    [400, 700, 1000],
-    [350, 600, 900],
-    [300, 500, 750],
-    [250, 420, 650],
-    [220, 380, 580],
-    [200, 340, 520],
-  ][tier];
+function playDrag(container, tier, onDone, session) {
+  const targetSize = [78, 68, 60, 53, 47, 42][tier];
 
   container.innerHTML = `
-    <div class="mg-reflex-box" id="mg-box">
-      <div class="mg-target-body mg-reflex-figure" id="mg-figure">${ENEMY_SILHOUETTE_SVG}</div>
-      <div class="mg-reflex-label" id="mg-label">STAY HIDDEN...</div>
-    </div>`;
-  const box = container.querySelector("#mg-box");
-  const figure = container.querySelector("#mg-figure");
-  const label = container.querySelector("#mg-label");
-  let flipped = false;
-  let flipTime = 0;
+    <div class="mg-drag-field" id="mg-drag-field">
+      <div class="mg-drag-target" id="mg-drag-target" style="width:${targetSize}px;height:${targetSize}px;"></div>
+      <div class="mg-drag-crosshair" id="mg-drag-crosshair"></div>
+    </div>
+    <div class="mg-pattern-status">Drag the reticle onto the mark and let go</div>
+  `;
+  const field = container.querySelector("#mg-drag-field");
+  const target = container.querySelector("#mg-drag-target");
+  const crosshair = container.querySelector("#mg-drag-crosshair");
+
+  const fw = field.clientWidth || 300;
+  const fh = field.clientHeight || 200;
+  const tx = 16 + Math.random() * Math.max(10, fw - targetSize - 32);
+  const ty = 16 + Math.random() * Math.max(10, fh - targetSize - 32);
+  target.style.left = tx + "px";
+  target.style.top = ty + "px";
+
+  let cx = fw / 2 - 16;
+  let cy = fh - 46;
+  crosshair.style.left = cx + "px";
+  crosshair.style.top = cy + "px";
+
+  let dragging = false;
   let done = false;
 
-  const delay = 800 + Math.random() * 1600;
-  const timer = setTimeout(() => {
-    flipped = true;
-    flipTime = performance.now();
-    label.textContent = "HE'S TURNED — FIRE!";
-    box.classList.add("mg-reflex-go");
-  }, delay);
+  function pointFromEvent(e) {
+    return e.touches && e.touches.length ? e.touches[0] : e;
+  }
 
-  box.addEventListener("click", () => {
+  function start(e) {
     if (done) return;
-    done = true;
-    if (!flipped) {
-      clearTimeout(timer);
-      mgResultText(container, "TOO EARLY — THEY SAW YOU COMING", "fail");
-      setTimeout(() => onDone(0), 700);
+    dragging = true;
+  }
+
+  function move(e) {
+    if (mgStale(session)) {
+      field.removeEventListener("mousemove", move);
+      field.removeEventListener("touchmove", move);
       return;
     }
-    const rect = figure.getBoundingClientRect();
-    const boxRect = box.getBoundingClientRect();
-    spawnMuzzleFlash(box, rect.left - boxRect.left + rect.width / 2, rect.top - boxRect.top + rect.height / 2);
-    const reaction = performance.now() - flipTime;
-    let perf;
-    if (reaction <= thresholds[0]) {
-      perf = 1;
-      figure.classList.add("mg-target-down");
-      mgResultText(container, "LIGHTNING FAST — ONE SHOT", "great");
-    } else if (reaction <= thresholds[1]) {
-      perf = 0.7;
-      figure.classList.add("mg-target-down");
-      mgResultText(container, "CLEAN HIT", "good");
-    } else if (reaction <= thresholds[2]) {
-      perf = 0.4;
-      figure.classList.add("mg-target-down");
-      mgResultText(container, "SLOW — HE ALMOST GOT AWAY", "ok");
-    } else {
-      perf = 0.15;
-      mgResultText(container, "TOO SLOW — HE'S RUNNING", "fail");
-    }
+    if (!dragging || done) return;
+    const rect = field.getBoundingClientRect();
+    const p = pointFromEvent(e);
+    cx = p.clientX - rect.left - 16;
+    cy = p.clientY - rect.top - 16;
+    crosshair.style.left = cx + "px";
+    crosshair.style.top = cy + "px";
+  }
+
+  function end() {
+    if (!dragging || done) return;
+    dragging = false;
+    done = true;
+    const centerX = cx + 16;
+    const centerY = cy + 16;
+    const targetCenterX = tx + targetSize / 2;
+    const targetCenterY = ty + targetSize / 2;
+    const dist = Math.hypot(centerX - targetCenterX, centerY - targetCenterY);
+    const perf = clamp01(1 - dist / targetSize);
+    spawnMuzzleFlash(field, centerX, centerY);
+    if (perf > 0.7) mgResultText(container, "DEAD ON TARGET", "great");
+    else if (perf > 0.35) mgResultText(container, "CLOSE ENOUGH", "good");
+    else mgResultText(container, "MISSED THE MARK", "fail");
     setTimeout(() => onDone(perf), 700);
-  });
+  }
+
+  crosshair.addEventListener("mousedown", start);
+  crosshair.addEventListener("touchstart", start, { passive: true });
+  field.addEventListener("mousemove", move);
+  field.addEventListener("touchmove", move, { passive: true });
+  field.addEventListener("mouseup", end);
+  field.addEventListener("touchend", end);
 }
 
-// ---------- Pattern memory ----------
+// ---------- Breach code ----------
+// Memorize a short sequence of directional icons shown all at once, then
+// reproduce it by tapping a fixed grid. Different exposure (all-at-once,
+// hidden, then recalled) from a flash-one-at-a-time memory game.
 
-function playPattern(container, tier, onDone) {
+function playBreach(container, tier, onDone, session) {
   const seqLen = [3, 4, 5, 6, 7, 8][tier];
-  const colors = ["red", "purple", "teal", "gold"];
-  const sequence = Array.from({ length: seqLen }, () => Math.floor(Math.random() * 4));
+  const icons = ["⬆", "➡", "⬇", "⬅"];
+  const sequence = Array.from({ length: seqLen }, () => icons[Math.floor(Math.random() * icons.length)]);
+  const revealMs = 1100 + seqLen * 380;
 
   container.innerHTML = `
-    <div class="mg-pattern-grid">
-      ${colors.map((c, i) => `<div class="mg-pad mg-pad-${c}" data-idx="${i}"></div>`).join("")}
-    </div>
-    <div class="mg-pattern-status" id="mg-status">Watch closely...</div>
+    <div class="mg-breach-sequence" id="mg-seq">${sequence.map((i) => `<span>${i}</span>`).join("")}</div>
+    <div class="mg-pattern-status" id="mg-status">Memorize the breach code...</div>
   `;
 
-  const pads = container.querySelectorAll(".mg-pad");
-  const status = container.querySelector("#mg-status");
-  let playerIdx = 0;
-  let accepting = false;
+  setTimeout(() => {
+    if (mgStale(session)) return;
+    const seqEl = container.querySelector("#mg-seq");
+    if (seqEl) seqEl.classList.add("mg-breach-hidden");
+    const status = container.querySelector("#mg-status");
+    if (status) status.textContent = "Enter the code";
 
-  function flash(i, cb) {
-    pads[i].classList.add("mg-pad-lit");
-    setTimeout(() => {
-      pads[i].classList.remove("mg-pad-lit");
-      setTimeout(cb, 220);
-    }, 480);
-  }
+    const grid = document.createElement("div");
+    grid.className = "mg-pattern-grid mg-breach-grid";
+    grid.innerHTML = icons.map((i) => `<div class="mg-pad mg-breach-pad" data-icon="${i}">${i}</div>`).join("");
+    container.appendChild(grid);
 
-  function playSequence(i) {
-    if (i >= sequence.length) {
-      accepting = true;
-      status.textContent = "Your turn — repeat it";
-      return;
-    }
-    flash(sequence[i], () => playSequence(i + 1));
-  }
-  setTimeout(() => playSequence(0), 500);
-
-  pads.forEach((pad) => {
-    pad.addEventListener("click", () => {
-      if (!accepting) return;
-      const idx = Number(pad.dataset.idx);
-      pad.classList.add("mg-pad-lit");
-      setTimeout(() => pad.classList.remove("mg-pad-lit"), 200);
-
-      if (idx === sequence[playerIdx]) {
-        playerIdx++;
-        if (playerIdx >= sequence.length) {
-          accepting = false;
-          mgResultText(container, "CODE MATCHED", "great");
-          setTimeout(() => onDone(1), 700);
+    let playerIdx = 0;
+    grid.querySelectorAll(".mg-breach-pad").forEach((pad) => {
+      pad.addEventListener("click", () => {
+        if (mgStale(session)) return;
+        const icon = pad.dataset.icon;
+        pad.classList.add("mg-pad-lit");
+        setTimeout(() => pad.classList.remove("mg-pad-lit"), 150);
+        if (icon === sequence[playerIdx]) {
+          playerIdx++;
+          if (playerIdx >= sequence.length) {
+            mgResultText(container, "BREACH SUCCESSFUL", "great");
+            setTimeout(() => onDone(1), 700);
+          }
+        } else {
+          const perf = clamp01(playerIdx / sequence.length);
+          mgResultText(container, "WRONG CODE", perf > 0.4 ? "ok" : "fail");
+          grid.querySelectorAll(".mg-breach-pad").forEach((p) => (p.style.pointerEvents = "none"));
+          setTimeout(() => onDone(perf * 0.8), 700);
         }
-      } else {
-        accepting = false;
-        const perf = clamp01(playerIdx / sequence.length);
-        mgResultText(container, "WRONG SEQUENCE", perf > 0.4 ? "ok" : "fail");
-        setTimeout(() => onDone(perf * 0.8), 700);
-      }
+      });
     });
-  });
+  }, revealMs);
 }
 
-// ---------- Multi-target takedown ----------
+// ---------- Rapid fire ----------
+// A fixed time window, targets keep spawning and stay up until clicked — pure
+// speed/APM instead of takedown's per-target expiry pressure.
 
-function playTakedown(container, tier, onDone, session) {
-  const total = [5, 6, 7, 8, 9, 10][tier];
-  const visibleMs = [900, 780, 650, 550, 480, 420][tier];
-  const gapMs = [350, 300, 260, 220, 190, 170][tier];
+function playRapidfire(container, tier, onDone, session) {
+  const totalMs = [6000, 6500, 7000, 7500, 8000, 8500][tier];
+  const spawnGapMs = [520, 470, 420, 380, 340, 300][tier];
 
   container.innerHTML = `
     <div class="mg-takedown-field" id="mg-field"></div>
-    <div class="mg-pattern-status" id="mg-status">Down: 0 / ${total}</div>
+    <div class="mg-pattern-status" id="mg-status">Hits: 0 · Time: ${(totalMs / 1000).toFixed(1)}s</div>
   `;
   const field = container.querySelector("#mg-field");
   const status = container.querySelector("#mg-status");
   let hits = 0;
-  let spawned = 0;
+  let ended = false;
+  const startT = Date.now();
+  const expectedSpawns = Math.max(3, Math.round(totalMs / spawnGapMs));
+
+  function updateStatus() {
+    const remain = Math.max(0, (totalMs - (Date.now() - startT)) / 1000);
+    status.textContent = `Hits: ${hits} · Time: ${remain.toFixed(1)}s`;
+  }
+
+  function finish() {
+    if (ended) return;
+    ended = true;
+    const perf = clamp01(hits / expectedSpawns);
+    mgResultText(
+      container,
+      perf >= 0.7 ? "RAPID CLEAR" : perf >= 0.35 ? "DECENT PACE" : "TOO SLOW",
+      perf >= 0.7 ? "great" : perf >= 0.35 ? "ok" : "fail"
+    );
+    setTimeout(() => onDone(perf), 700);
+  }
 
   function spawnOne() {
-    if (mgStale(session)) return; // this session was skipped/replaced — stop touching shared DOM/state
-    if (spawned >= total) {
-      setTimeout(() => {
-        const perf = hits / total;
-        mgResultText(container, perf >= 0.8 ? "AREA CLEARED" : perf >= 0.4 ? "MOSTLY CLEAR" : "TOO MANY LEFT STANDING", perf >= 0.8 ? "great" : perf >= 0.4 ? "ok" : "fail");
-        setTimeout(() => onDone(perf), 700);
-      }, 200);
+    if (mgStale(session) || ended) return;
+    if (Date.now() - startT >= totalMs) {
+      finish();
       return;
     }
-    spawned++;
     const target = document.createElement("div");
     target.className = "mg-target";
     target.innerHTML = ENEMY_SILHOUETTE_SVG;
@@ -242,33 +290,92 @@ function playTakedown(container, tier, onDone, session) {
     target.style.top = Math.random() * Math.max(fh, 10) + "px";
     let hit = false;
     target.addEventListener("click", () => {
-      if (hit) return;
+      if (hit || ended) return;
       hit = true;
       hits++;
-      status.textContent = `Down: ${hits} / ${total}`;
+      updateStatus();
       spawnMuzzleFlash(field, target.offsetLeft + 22, target.offsetTop + 22);
       target.classList.add("mg-target-down");
       setTimeout(() => target.remove(), 160);
     });
     field.appendChild(target);
-    setTimeout(() => {
-      if (!hit && target.parentNode) target.remove();
-      setTimeout(spawnOne, gapMs);
-    }, visibleMs);
+    setTimeout(spawnOne, spawnGapMs);
   }
-  setTimeout(spawnOne, 400);
+
+  const statusInterval = setInterval(() => {
+    if (mgStale(session) || ended) {
+      clearInterval(statusInterval);
+      return;
+    }
+    updateStatus();
+    if (Date.now() - startT >= totalMs) {
+      clearInterval(statusInterval);
+      finish();
+    }
+  }, 200);
+
+  spawnOne();
+}
+
+// ---------- Steady aim ----------
+// A reticle drifts in a slow 2D loop around a fixed mark; click when it lines
+// up. Continuous 2D drift instead of a 1D back-and-forth bar.
+
+function playAim(container, tier, onDone, session) {
+  const speed = [1.0, 1.15, 1.3, 1.5, 1.7, 1.9][tier];
+  const zoneRadius = [50, 44, 38, 33, 28, 24][tier];
+
+  container.innerHTML = `
+    <div class="mg-aim-field" id="mg-aim-field">
+      <div class="mg-aim-zone" style="width:${zoneRadius * 2}px;height:${zoneRadius * 2}px;"></div>
+      <div class="mg-aim-reticle" id="mg-aim-reticle"></div>
+    </div>
+    <div class="mg-pattern-status">Click when the reticle lines up on the mark</div>
+  `;
+  const field = container.querySelector("#mg-aim-field");
+  const reticle = container.querySelector("#mg-aim-reticle");
+  let done = false;
+  let raf = null;
+  let lastX = 0;
+  let lastY = 0;
+  const startT = performance.now();
+
+  function tick(now) {
+    if (mgStale(session) || done) return;
+    const t = ((now - startT) / 1000) * speed;
+    const fw = field.clientWidth || 300;
+    const fh = field.clientHeight || 200;
+    lastX = fw / 2 + Math.sin(t * 1.3) * fw * 0.32;
+    lastY = fh / 2 + Math.sin(t * 0.9 + 1.2) * fh * 0.32;
+    reticle.style.left = lastX + "px";
+    reticle.style.top = lastY + "px";
+    raf = requestAnimationFrame(tick);
+  }
+  raf = requestAnimationFrame(tick);
+
+  field.addEventListener("click", () => {
+    if (done) return;
+    done = true;
+    if (raf) cancelAnimationFrame(raf);
+    const fw = field.clientWidth || 300;
+    const fh = field.clientHeight || 200;
+    const dist = Math.hypot(lastX - fw / 2, lastY - fh / 2);
+    const perf = clamp01(1 - dist / (zoneRadius + 20));
+    spawnMuzzleFlash(field, lastX, lastY);
+    if (perf > 0.75) mgResultText(container, "DEAD-ON LOCK", "great");
+    else if (perf > 0.4) mgResultText(container, "CLOSE SHOT", "good");
+    else mgResultText(container, "OFF TARGET", "fail");
+    setTimeout(() => onDone(perf), 700);
+  });
 }
 
 const MINIGAME_PLAYERS = {
-  timing: playTiming,
-  reflex: playReflex,
-  pattern: playPattern,
-  takedown: playTakedown,
+  charge: playCharge,
+  drag: playDrag,
+  breach: playBreach,
+  rapidfire: playRapidfire,
+  aim: playAim,
 };
-
-function mgStale(session) {
-  return session !== window.__mgSession;
-}
 
 function startMinigame(contract, container, onDone) {
   const player = MINIGAME_PLAYERS[contract.minigame];

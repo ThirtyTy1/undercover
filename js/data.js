@@ -45,52 +45,52 @@ const TRAVEL_COST = 5000;
 const CONTRACTS = [
   // Tier 0 - Street Hitter
   { id: "c1", name: "Debt Collector", tier: 0, payout: 400, rep: 3, duration: 4, baseChance: 0.85, heat: 3,
-    minigame: "timing", mgTitle: "Shake Them Down", mgFlavor: "Time your move for when they're about to crack." },
+    minigame: "charge", mgTitle: "Shake Them Down", mgFlavor: "Time your move for when they're about to crack." },
   { id: "c2", name: "Rival Dealer", tier: 0, payout: 800, rep: 6, duration: 7, baseChance: 0.75, heat: 6,
-    minigame: "reflex", mgTitle: "Ambush", mgFlavor: "Wait for your opening. Don't move too soon." },
+    minigame: "aim", mgTitle: "Ambush", mgFlavor: "Wait for your opening. Don't move too soon." },
   { id: "c3", name: "Loudmouth Snitch", tier: 0, payout: 1500, rep: 9, duration: 10, baseChance: 0.65, heat: 9,
-    minigame: "takedown", mgTitle: "Silence Them", mgFlavor: "Shut down every witness before they talk." },
+    minigame: "rapidfire", mgTitle: "Silence Them", mgFlavor: "Shut down every witness before they talk." },
   // Tier 1 - Fixer
   { id: "c4", name: "Crooked Cop", tier: 1, payout: 3500, rep: 20, duration: 15, baseChance: 0.6, heat: 14,
-    minigame: "timing", mgTitle: "The Payoff", mgFlavor: "Slide the bribe at exactly the right moment." },
+    minigame: "charge", mgTitle: "The Payoff", mgFlavor: "Slide the bribe at exactly the right moment." },
   { id: "c5", name: "Business Rival", tier: 1, payout: 6000, rep: 28, duration: 20, baseChance: 0.55, heat: 18,
-    minigame: "pattern", mgTitle: "Crack the Safe", mgFlavor: "Match the combination before security notices." },
+    minigame: "breach", mgTitle: "Crack the Safe", mgFlavor: "Match the combination before security notices." },
   { id: "c6", name: "Gang Lieutenant", tier: 1, payout: 10000, rep: 40, duration: 28, baseChance: 0.5, heat: 22,
-    minigame: "takedown", mgTitle: "Clear the Crew", mgFlavor: "Drop his men before they reach for their guns." },
+    minigame: "rapidfire", mgTitle: "Clear the Crew", mgFlavor: "Drop his men before they reach for their guns." },
   // Tier 2 - Ghost
   { id: "c7", name: "Cartel Boss", tier: 2, payout: 25000, rep: 80, duration: 38, baseChance: 0.45, heat: 28,
-    minigame: "pattern", mgTitle: "Bypass Security", mgFlavor: "Mirror the compound's access code." },
+    minigame: "drag", mgTitle: "Bypass Security", mgFlavor: "Mirror the compound's access code." },
   { id: "c8", name: "Corrupt Judge", tier: 2, payout: 40000, rep: 107, duration: 45, baseChance: 0.4, heat: 32,
-    minigame: "timing", mgTitle: "The Drop", mgFlavor: "Hand off the evidence at the perfect moment." },
+    minigame: "drag", mgTitle: "The Drop", mgFlavor: "Hand off the evidence at the perfect moment." },
   { id: "c9", name: "Federal Informant", tier: 2, payout: 65000, rep: 147, duration: 55, baseChance: 0.35, heat: 38,
-    minigame: "reflex", mgTitle: "Cut the Line", mgFlavor: "Catch him before he dials for backup." },
+    minigame: "charge", mgTitle: "Cut the Line", mgFlavor: "Catch him before he dials for backup." },
   // Tier 3 - Legend
   { id: "c10", name: "Crime Family Head", tier: 3, payout: 150000, rep: 333, duration: 75, baseChance: 0.35, heat: 45,
-    minigame: "reflex", mgTitle: "One Shot", mgFlavor: "You won't get a second chance. Time it perfectly." },
+    minigame: "aim", mgTitle: "One Shot", mgFlavor: "You won't get a second chance. Time it perfectly." },
   { id: "c11", name: "Foreign Diplomat", tier: 3, payout: 300000, rep: 500, duration: 90, baseChance: 0.3, heat: 50,
-    minigame: "pattern", mgTitle: "Vault Access", mgFlavor: "Replicate the embassy's security sequence." },
+    minigame: "breach", mgTitle: "Vault Access", mgFlavor: "Replicate the embassy's security sequence." },
   { id: "c12", name: "The Kingpin", tier: 3, unlockRep: 1350, payout: 600000, rep: 800, duration: 120, baseChance: 0.28, heat: 55,
-    minigame: "takedown", mgTitle: "Final Stand", mgFlavor: "Drop every last guard between you and him." },
+    minigame: "rapidfire", mgTitle: "Final Stand", mgFlavor: "Drop every last guard between you and him." },
   // Tier 4 - Kingmaker
   { id: "c13", name: "Silence the Board", tier: 4, unlockRep: 2150, payout: 800000, rep: 950, duration: 100, baseChance: 0.25, heat: 60,
-    minigame: "pattern", mgTitle: "Corporate Coup", mgFlavor: "Erase every trace before the board convenes." },
+    minigame: "breach", mgTitle: "Corporate Coup", mgFlavor: "Erase every trace before the board convenes." },
   // Tier 5 - Shadow Don
   { id: "c14", name: "Take the Crown", tier: 5, unlockRep: 3200, payout: 1100000, rep: 1200, duration: 130, baseChance: 0.22, heat: 68,
-    minigame: "takedown", mgTitle: "Seize the Throne", mgFlavor: "Drop everyone standing between you and the top." },
+    minigame: "rapidfire", mgTitle: "Seize the Throne", mgFlavor: "Drop everyone standing between you and the top." },
   // Miami exclusive — requires flying in on a private jet
   { id: "c15", name: "Yacht Party Hit", city: "miami", tier: 3, payout: 500000, rep: 700, duration: 90, baseChance: 0.3, heat: 50,
-    minigame: "reflex", mgTitle: "Deck Ambush", mgFlavor: "Catch him alone between the bar and the stern." },
+    minigame: "aim", mgTitle: "Deck Ambush", mgFlavor: "Catch him alone between the bar and the stern." },
   { id: "c16", name: "Nightclub Kingpin", city: "miami", tier: 4, payout: 900000, rep: 1000, duration: 110, baseChance: 0.26, heat: 62,
-    minigame: "pattern", mgTitle: "VIP Access", mgFlavor: "Match the doorman's code before the set ends." },
+    minigame: "breach", mgTitle: "VIP Access", mgFlavor: "Match the doorman's code before the set ends." },
   { id: "c17", name: "Cartel Meeting", city: "miami", tier: 5, payout: 1300000, rep: 1300, duration: 140, baseChance: 0.2, heat: 72,
-    minigame: "takedown", mgTitle: "The Sit-Down", mgFlavor: "Every man at the table is armed. Move first." },
+    minigame: "rapidfire", mgTitle: "The Sit-Down", mgFlavor: "Every man at the table is armed. Move first." },
   // Tokyo exclusive — requires flying in on a private jet
   { id: "c18", name: "Shibuya Shakedown", city: "tokyo", tier: 3, payout: 550000, rep: 720, duration: 95, baseChance: 0.29, heat: 52,
-    minigame: "timing", mgTitle: "Crossing Handoff", mgFlavor: "Slip the package across at the exact light change." },
+    minigame: "drag", mgTitle: "Crossing Handoff", mgFlavor: "Slip the package across at the exact light change." },
   { id: "c19", name: "Yakuza Lieutenant", city: "tokyo", tier: 4, payout: 950000, rep: 1050, duration: 115, baseChance: 0.25, heat: 64,
-    minigame: "reflex", mgTitle: "Back Room", mgFlavor: "He only turns his back once. Take it." },
+    minigame: "charge", mgTitle: "Back Room", mgFlavor: "He only turns his back once. Take it." },
   { id: "c20", name: "Underground Auction", city: "tokyo", tier: 5, payout: 1400000, rep: 1350, duration: 145, baseChance: 0.19, heat: 74,
-    minigame: "pattern", mgTitle: "Bidder's Vault", mgFlavor: "Crack the lot case before the gavel falls." },
+    minigame: "drag", mgTitle: "Bidder's Vault", mgFlavor: "Crack the lot case before the gavel falls." },
 ];
 
 // Rotating special contract — one is always live, and it swaps out for a new one every
@@ -102,17 +102,17 @@ const SPECIAL_ROTATION_MS = SPECIAL_ROTATION_DAYS * 24 * 60 * 60 * 1000;
 
 const SPECIAL_CONTRACTS = [
   { id: "sp1", special: true, name: "The Informant's Tip", tier: 0, payout: 1400, rep: 10, duration: 6, baseChance: 0.7, heat: 5,
-    minigame: "reflex", mgTitle: "Burn the Source", mgFlavor: "He's about to talk. Get to him first." },
+    minigame: "aim", mgTitle: "Burn the Source", mgFlavor: "He's about to talk. Get to him first." },
   { id: "sp2", special: true, name: "High-Value Target", tier: 1, payout: 10000, rep: 45, duration: 22, baseChance: 0.5, heat: 20,
-    minigame: "pattern", mgTitle: "Breach the Safehouse", mgFlavor: "Every second past the code adds risk." },
+    minigame: "breach", mgTitle: "Breach the Safehouse", mgFlavor: "Every second past the code adds risk." },
   { id: "sp3", special: true, name: "The Big Score", tier: 2, payout: 68000, rep: 150, duration: 48, baseChance: 0.38, heat: 34,
-    minigame: "timing", mgTitle: "The Exchange", mgFlavor: "One shot to make the handoff clean." },
+    minigame: "drag", mgTitle: "The Exchange", mgFlavor: "One shot to make the handoff clean." },
   { id: "sp4", special: true, name: "Federal Witness", tier: 3, payout: 380000, rep: 520, duration: 85, baseChance: 0.3, heat: 48,
-    minigame: "reflex", mgTitle: "Silence the Witness", mgFlavor: "The trial starts tomorrow. He doesn't make it." },
+    minigame: "aim", mgTitle: "Silence the Witness", mgFlavor: "The trial starts tomorrow. He doesn't make it." },
   { id: "sp5", special: true, name: "Rival Family Boss", tier: 4, payout: 1000000, rep: 1000, duration: 105, baseChance: 0.24, heat: 58,
-    minigame: "takedown", mgTitle: "Take the Compound", mgFlavor: "His whole crew is between you and him." },
+    minigame: "rapidfire", mgTitle: "Take the Compound", mgFlavor: "His whole crew is between you and him." },
   { id: "sp6", special: true, name: "The Ghost Contract", tier: 5, payout: 1600000, rep: 1400, duration: 135, baseChance: 0.2, heat: 70,
-    minigame: "pattern", mgTitle: "No Trace Left", mgFlavor: "Whoever this is, they were never here." },
+    minigame: "breach", mgTitle: "No Trace Left", mgFlavor: "Whoever this is, they were never here." },
 ];
 
 function currentSpecialSlot() {

@@ -852,73 +852,126 @@ body {
 .mg-result-text.ok { color: var(--text-dim); }
 .mg-result-text.fail { color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); }
 
-/* Timing bar */
-.mg-timing-track {
+/* Charge & release */
+.mg-charge-track {
   position: relative;
-  width: 100%;
-  height: 22px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  overflow: visible;
-}
-.mg-timing-zone {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  background: rgba(0, 255, 240, 0.25);
-  border-left: 2px solid var(--neon-teal);
-  border-right: 2px solid var(--neon-teal);
-}
-.mg-timing-marker {
-  position: absolute;
-  top: -4px;
-  width: 6px;
-  height: 30px;
-  background: var(--neon-red);
-  box-shadow: 0 0 10px var(--neon-red);
-  transform: translateX(-50%);
-}
-
-/* Reflex */
-.mg-reflex-box {
-  width: 100%;
+  width: 60px;
   height: 180px;
   background: var(--panel-2);
-  border: 2px solid var(--neon-red);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  cursor: crosshair;
-  user-select: none;
+  border: 1px solid var(--border);
+  margin: 0 auto;
+}
+.mg-charge-zone {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  background: rgba(255, 209, 102, 0.25);
+  border-top: 2px solid var(--neon-gold);
+  border-bottom: 2px solid var(--neon-gold);
+}
+.mg-charge-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(0deg, var(--neon-red), var(--neon-gold));
+  box-shadow: 0 0 12px var(--neon-red);
+}
+
+/* Drag to target */
+.mg-drag-field {
   position: relative;
+  width: 100%;
+  height: 220px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
-.mg-reflex-box.mg-reflex-go {
-  background: rgba(0, 255, 240, 0.15);
-  border-color: var(--neon-teal);
+.mg-drag-target {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px dashed var(--neon-gold);
+  box-shadow: 0 0 14px rgba(255, 209, 102, 0.4);
 }
-.mg-reflex-figure {
-  width: 64px;
-  opacity: 0.4;
-  filter: grayscale(1);
-  transition: opacity 0.2s, filter 0.2s;
+.mg-drag-crosshair {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--neon-teal);
+  box-shadow: 0 0 10px var(--neon-teal);
+  cursor: grab;
+  touch-action: none;
 }
-.mg-reflex-box.mg-reflex-go .mg-reflex-figure {
-  opacity: 1;
-  filter: none;
+.mg-drag-crosshair::before,
+.mg-drag-crosshair::after {
+  content: "";
+  position: absolute;
+  background: var(--neon-teal);
 }
-.mg-reflex-label {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--neon-red);
-}
-.mg-reflex-box.mg-reflex-go .mg-reflex-label {
+.mg-drag-crosshair::before { left: 50%; top: 4px; bottom: 4px; width: 1.5px; transform: translateX(-50%); }
+.mg-drag-crosshair::after { top: 50%; left: 4px; right: 4px; height: 1.5px; transform: translateY(-50%); }
+
+/* Breach code */
+.mg-breach-sequence {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  font-size: 2rem;
   color: var(--neon-teal);
-  text-shadow: 0 0 12px var(--neon-teal);
+  text-shadow: 0 0 10px var(--neon-teal);
+  transition: opacity 0.2s;
+}
+.mg-breach-sequence.mg-breach-hidden {
+  opacity: 0;
+}
+.mg-breach-pad {
+  aspect-ratio: 1;
+  cursor: pointer;
+  background: var(--panel-2);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: var(--text);
+  transition: opacity 0.15s;
+}
+.mg-breach-pad.mg-pad-lit {
+  opacity: 1;
+  border-color: var(--neon-teal);
+  color: var(--neon-teal);
+  box-shadow: 0 0 20px var(--neon-teal);
+}
+
+/* Steady aim */
+.mg-aim-field {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: crosshair;
+}
+.mg-aim-zone {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px dashed var(--neon-gold);
+}
+.mg-aim-reticle {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--neon-red);
+  box-shadow: 0 0 10px var(--neon-red);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 /* Pattern memory */
