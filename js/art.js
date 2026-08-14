@@ -600,6 +600,17 @@ const ITEM_PHOTO = {
   cloth8: "assets/items/cloth8.jpg",
   buy10: "assets/items/buy10.jpg",
   jet5: "assets/items/jet5.jpg",
+  car16: "assets/items/car16.jpg",
+  car17: "assets/items/car17.jpg",
+  car18: "assets/items/car18.png",
+  cloth9: "assets/items/cloth9.jpg",
+  cloth10: "assets/items/cloth10.jpg",
+  cloth11: "assets/items/cloth11.jpg",
+  cloth12: "assets/items/cloth12.jpg",
+  rent5: "assets/items/rent5.jpg",
+  buy11: "assets/items/buy11.jpg",
+  buy12: "assets/items/buy12.jpg",
+  buy13: "assets/items/buy13.jpg",
 };
 
 function itemArtSVG(id, size = 64) {
