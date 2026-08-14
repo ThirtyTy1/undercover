@@ -4,11 +4,11 @@ const SAVE_KEY = "hitman_empire_save_v1";
 
 function freshState() {
   return {
-    cash: 500,
+    cash: 1000,
     bankBalance: 0,
     nextInterestAt: null,
     heat: 0,
-    rep: 0,
+    rep: 400,
     ownedWeapons: ["w1"],
     equippedWeapon: "w1",
     ownedFlex: [],
@@ -33,7 +33,7 @@ function freshState() {
     watchOrders: [],
     nextWatchOrderAt: null,
     currentCity: "detroit",
-    highestTierSeen: 0,
+    highestTierSeen: tierForRep(400), // matches the starting rep so the first contract doesn't trigger a retroactive promotion windfall
     lastSpecialSlotCompleted: null,
   };
 }
