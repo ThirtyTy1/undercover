@@ -304,7 +304,7 @@ function bankTabHTML() {
         <button class="btn sell" data-action="withdraw-bank" data-amount="10000">Withdraw ${fmt(10000)}</button>
       </div>
       <div class="atm-custom">
-        <input type="text" autocapitalize="characters" id="bank-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 1.5M" />
+        <input type="text" inputmode="text" autocomplete="off" autocapitalize="characters" id="bank-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 1.5M" />
         <button class="btn" data-action="deposit-bank-custom">Deposit</button>
         <button class="btn sell" data-action="withdraw-bank-custom">Withdraw</button>
       </div>
@@ -398,7 +398,7 @@ function sportsbookHTML() {
       <button class="btn" data-action="sports-bet" data-amount="10000" ${!selLabel || state.cash < 10000 ? "disabled" : ""}>Bet ${fmt(10000)}</button>
     </div>
     <div class="atm-custom">
-      <input type="text" autocapitalize="characters" id="sports-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 100K" />
+      <input type="text" inputmode="text" autocomplete="off" autocapitalize="characters" id="sports-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 100K" />
       <button class="btn" data-action="sports-bet-custom" ${!selLabel ? "disabled" : ""}>Bet</button>
     </div>`;
 }
