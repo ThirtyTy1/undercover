@@ -38,6 +38,7 @@ function render() {
   if (phoneOpenContact === "__gunorders__") renderGunOrdersView();
   if (phoneOpenContact === "__watchorders__") renderWatchOrdersView();
   if (phoneOpenContact === "__home__") renderPhoneHome();
+  if (phoneOpenContact === "__books__") renderBooksView();
 }
 
 function renderStats() {
@@ -818,8 +819,43 @@ function businessesTabHTML() {
   return `${status}<div class="grid">${cards}</div>`;
 }
 
+const CITY_MAP_POS = {
+  detroit: { x: 95, y: 100 },
+  miami: { x: 330, y: 185 },
+  tokyo: { x: 520, y: 55 },
+};
+const CITY_ROUTES = [
+  ["detroit", "miami"],
+  ["detroit", "tokyo"],
+];
+
+function territoryMapSVG(ownedJet) {
+  const routeLines = CITY_ROUTES.map(([a, b]) => {
+    const p1 = CITY_MAP_POS[a];
+    const p2 = CITY_MAP_POS[b];
+    return `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" class="map-route" />`;
+  }).join("");
+
+  const nodes = CITIES.map((c) => {
+    const pos = CITY_MAP_POS[c.id];
+    const here = state.currentCity === c.id;
+    const locked = c.requiresJet && !ownedJet;
+    const cls = here ? "map-node-here" : locked ? "map-node-locked" : "map-node-open";
+    return `
+      <g class="map-node ${cls}" data-action="travel-city" data-id="${c.id}">
+        ${here ? `<circle cx="${pos.x}" cy="${pos.y}" r="22" class="map-node-pulse" />` : ""}
+        <circle cx="${pos.x}" cy="${pos.y}" r="14" class="map-node-dot" />
+        <text x="${pos.x}" y="${pos.y + 4}" class="map-node-icon">${locked ? "🔒" : here ? "📍" : "✈️"}</text>
+        <text x="${pos.x}" y="${pos.y + 34}" class="map-node-label">${c.name}</text>
+      </g>`;
+  }).join("");
+
+  return `<svg viewBox="0 0 600 230" class="territory-map">${routeLines}${nodes}</svg>`;
+}
+
 function worldTabHTML() {
   const ownedJet = hasPrivateJet();
+  const map = territoryMapSVG(ownedJet);
   const cards = CITIES.map((c) => {
     const here = state.currentCity === c.id;
     const locked = c.requiresJet && !ownedJet;
@@ -839,7 +875,7 @@ function worldTabHTML() {
       </div>`;
   }).join("");
 
-  return `<div class="grid">${cards}</div>`;
+  return `<div class="territory-map-wrap">${map}</div><div class="grid">${cards}</div>`;
 }
 
 function bindTabEvents() {
@@ -998,7 +1034,7 @@ const HOME_APPS = [
   { icon: "🕐", label: "Countdown", bg: "linear-gradient(160deg,#2e2e2e,#000)" },
   { icon: "⚙️", label: "Settings", bg: "linear-gradient(160deg,#9a9aa0,#4a4a50)" },
   { icon: "🗺️", label: "Routes", bg: "linear-gradient(160deg,#5ecbf5,#1a7fae)" },
-  { icon: "💰", label: "Ledger", bg: "linear-gradient(160deg,#c14dff,#5a0aa8)" },
+  { icon: "💰", label: "Ledger", bg: "linear-gradient(160deg,#00e676,#0a8f45)", action: "open-books" },
 ];
 const HOME_DOCK = [
   { icon: "📞", bg: "linear-gradient(160deg,#3ddc73,#1a8f45)" },
@@ -1016,7 +1052,7 @@ function renderPhoneHome() {
   const tier = TIERS[tierIdx];
   const appIcons = HOME_APPS.map(
     (a) => `
-      <div class="home-app" data-action="open-contacts">
+      <div class="home-app" data-action="${a.action || "open-contacts"}">
         <div class="home-app-icon" style="background:${a.bg}">${a.icon}</div>
         <div class="home-app-label">${a.label}</div>
       </div>`
@@ -1269,6 +1305,50 @@ function renderWatchOrdersView() {
   document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
 }
 
+function historySparkline(history, w, h) {
+  if (history.length < 2) return "";
+  const max = Math.max(...history);
+  const min = Math.min(...history);
+  const range = max - min || 1;
+  return history
+    .map((v, i) => {
+      const x = (i / (history.length - 1)) * w;
+      const y = h - ((v - min) / range) * h;
+      return `${x},${y}`;
+    })
+    .join(" ");
+}
+
+function renderBooksView() {
+  phoneOpenContact = "__books__";
+  document.getElementById("phone-title").textContent = "Books";
+  document.getElementById("phone-back").classList.remove("hidden");
+
+  const history = state.netWorthHistory.length ? state.netWorthHistory : [netWorth()];
+  const points = historySparkline(history, 300, 90);
+  const trend = history.length > 1 ? history[history.length - 1] - history[0] : 0;
+  const trendCls = trend > 0 ? "great" : trend < 0 ? "fail" : "ok";
+
+  document.getElementById("phone-body").innerHTML = `
+    <div class="books-hero">
+      <div class="home-widget-label">Net Worth</div>
+      <div class="books-networth">${fmt(netWorth())}</div>
+      <div class="mg-result-text ${trendCls}" style="font-size:0.75rem">${trend >= 0 ? "▲" : "▼"} ${fmt(Math.abs(trend))} over this session</div>
+      <svg viewBox="0 0 300 90" class="books-chart"><polyline points="${points}" /></svg>
+    </div>
+    <h3 class="cat-heading">Revenue Streams (Lifetime)</h3>
+    <div class="vault-stat-grid">
+      <div class="vault-stat-card"><span class="stat-label">Total Earned</span><span class="stat-value cash">${fmt(state.stats.totalEarned)}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Business Income</span><span class="stat-value cash">${fmt(state.stats.businessIncomeTotal)}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Drug Sales</span><span class="stat-value cash">${fmt(state.stats.drugSalesTotal)}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Gun Sales</span><span class="stat-value cash">${fmt(state.stats.gunSalesTotal)}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Watch Sales</span><span class="stat-value cash">${fmt(state.stats.watchSalesTotal)}</span></div>
+      <div class="vault-stat-card"><span class="stat-label">Cash + Bank</span><span class="stat-value cash">${fmt(state.cash + state.bankBalance)}</span></div>
+    </div>
+    <div class="hint">Net worth is sampled every 10s this session — the chart resets when you close the tab.</div>
+  `;
+}
+
 function renderPhoneThread(contactId) {
   const contact = CONTACTS.find((c) => c.id === contactId);
   if (!contact) return;
@@ -1302,6 +1382,7 @@ document.getElementById("phone-toggle").addEventListener("click", togglePhone);
 document.getElementById("phone-close").addEventListener("click", closePhone);
 function phoneGoBack() {
   if (phoneOpenContact === null) renderPhoneHome();
+  else if (phoneOpenContact === "__books__") renderPhoneHome();
   else renderPhoneContacts();
 }
 document.getElementById("phone-back").addEventListener("click", phoneGoBack);
@@ -1327,6 +1408,7 @@ document.getElementById("phone-body").addEventListener("click", (e) => {
     else if (action === "counter-watch-order") counterWatchOrder(actionBtn.dataset.id, Number(actionBtn.dataset.pct), Number(actionBtn.dataset.chance));
     else if (action === "decline-watch-order") declineWatchOrder(actionBtn.dataset.id);
     else if (action === "open-contacts") renderPhoneContacts();
+    else if (action === "open-books") renderBooksView();
   } else if (contactRow) {
     const id = contactRow.dataset.contact;
     if (id === "__plug__") renderPlugPanel();

@@ -17,7 +17,8 @@ function freshState() {
     log: [],
     tickCount: 0,
     residences: [], // [{ type: "rent" | "own", id, nextBillAt }] — up to MAX_RENTALS rentals + 1 owned
-    stats: { contractsCompleted: 0, contractsFailed: 0, timesBurned: 0, totalEarned: 0, drugSalesTotal: 0, gunSalesTotal: 0, watchSalesTotal: 0 },
+    stats: { contractsCompleted: 0, contractsFailed: 0, timesBurned: 0, totalEarned: 0, drugSalesTotal: 0, gunSalesTotal: 0, watchSalesTotal: 0, businessIncomeTotal: 0 },
+    netWorthHistory: [],
     phone: { threads: {}, nextJobBonus: 0 },
     hiredAgents: [],
     nextAgentPayoutAt: null,
@@ -681,6 +682,7 @@ function processBusinessPayout() {
   }
   state.cash += income;
   state.stats.totalEarned += income;
+  state.stats.businessIncomeTotal += income;
   addLog(`Business income: +${fmt(income)}`, "success");
   state.nextBusinessPayoutAt = Date.now() + BUSINESS_CYCLE_SECONDS * 1000;
 }
@@ -1419,6 +1421,11 @@ function gameTick() {
   const decay = 0.3 * (1 + totalHeatReduction());
   state.heat = Math.max(0, state.heat - decay);
 
+  // sample net worth every 10s for the Books chart, capped at 60 points (~10 minutes of trend)
+  if (state.tickCount % 10 === 0) {
+    state.netWorthHistory.push(netWorth());
+    if (state.netWorthHistory.length > 60) state.netWorthHistory.shift();
+  }
 
   processBilling();
   processBankInterest();

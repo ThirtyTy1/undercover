@@ -2,20 +2,21 @@
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 :root {
-  --bg: #07070a;
-  --panel: #111113;
-  --panel-2: #17161a;
-  --border: #2c2a26;
-  --neon-red: #ff2e63;
-  --neon-purple: #b026ff;
-  --neon-teal: #00fff0;
+  --bg: #060a08;
+  --panel: #10140f;
+  --panel-2: #171d16;
+  --border: #263026;
+  --neon-red: #ff3b5c;
+  --neon-purple: #00e676; /* primary "cash" accent — kept the old variable name so every existing rule that reads it just goes green */
+  --neon-teal: #22d3ee;
   --neon-gold: #ffd166;
-  --text: #e8e4d8;
-  --text-dim: #8a8578;
+  --text: #eef5f0;
+  --text-dim: #869388;
   --paper: #d8cfae;
   --stamp-red: #c62b3a;
   --font-display: "Oswald", "Segoe UI", sans-serif;
   --font-mono: "Courier Prime", "Courier New", monospace;
+  --radius: 14px;
 }
 
 * { scrollbar-color: var(--border) var(--panel); }
@@ -23,8 +24,8 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0;
   background:
-    radial-gradient(ellipse at 20% -10%, #241a08 0%, transparent 45%),
-    radial-gradient(ellipse at 100% 0%, #170a1e 0%, transparent 50%),
+    radial-gradient(ellipse at 20% -10%, #0e2a18 0%, transparent 45%),
+    radial-gradient(ellipse at 100% 0%, #0a2420 0%, transparent 50%),
     var(--bg);
   color: var(--text);
   font-family: var(--font-mono);
@@ -227,8 +228,9 @@ body {
 }
 
 .tab-btn {
-  background: #0b0a0c;
+  background: #0b0e0b;
   border: 1px solid var(--border);
+  border-radius: 10px;
   color: var(--text-dim);
   padding: 12px 14px;
   cursor: pointer;
@@ -238,7 +240,6 @@ body {
   letter-spacing: 1.5px;
   text-transform: uppercase;
   text-align: left;
-  clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
   transition: color 0.15s, border-color 0.15s;
 }
 .tab-btn:hover { color: var(--text); }
@@ -262,6 +263,7 @@ body {
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 20px;
   position: relative;
 }
@@ -336,8 +338,9 @@ body {
 }
 
 .card {
-  background: linear-gradient(160deg, var(--panel-2), #121014);
+  background: linear-gradient(160deg, var(--panel-2), #0e130f);
   border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -450,35 +453,41 @@ body {
 
 .btn {
   margin-top: auto;
-  background: linear-gradient(90deg, var(--neon-purple), var(--neon-red));
+  background: linear-gradient(135deg, var(--neon-purple), #00b85c);
   border: none;
-  color: #08060a;
+  border-radius: 12px;
+  color: #05130a;
   font-weight: 700;
-  padding: 9px 14px;
+  padding: 10px 16px;
   cursor: pointer;
   font-family: var(--font-display);
   font-size: 0.8rem;
   letter-spacing: 1px;
   text-transform: uppercase;
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  box-shadow: 0 3px 10px rgba(0, 230, 118, 0.25);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
+.btn:active { transform: scale(0.97); }
 .btn:disabled {
   background: var(--border);
   color: var(--text-dim);
   cursor: not-allowed;
+  box-shadow: none;
 }
 .btn.equipped {
   background: var(--panel);
   border: 1px solid var(--neon-teal);
   color: var(--neon-teal);
+  box-shadow: none;
 }
 .btn.launder {
-  background: linear-gradient(90deg, var(--neon-purple), var(--neon-teal));
+  background: linear-gradient(135deg, var(--neon-purple), var(--neon-teal));
 }
 .btn.sell {
   background: transparent;
   border: 1px solid var(--neon-red);
   color: var(--neon-red);
+  box-shadow: none;
 }
 
 /* ---------- Vault ---------- */
@@ -574,6 +583,100 @@ body {
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--neon-teal);
+}
+
+.books-hero {
+  background: linear-gradient(160deg, var(--panel-2), #0a1a10);
+  border: 1px solid var(--neon-purple);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 20px rgba(0, 230, 118, 0.12);
+}
+.books-networth {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--neon-purple);
+  text-shadow: 0 0 10px rgba(0, 230, 118, 0.5);
+  margin: 2px 0 6px;
+}
+.books-chart {
+  width: 100%;
+  height: 90px;
+  margin-top: 10px;
+}
+.books-chart polyline {
+  fill: none;
+  stroke: var(--neon-purple);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px var(--neon-purple));
+}
+
+.territory-map-wrap {
+  background: radial-gradient(ellipse at 30% 20%, #0e2a18, #060a08 70%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  margin-bottom: 16px;
+}
+.territory-map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.map-route {
+  stroke: var(--text-dim);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 6;
+  opacity: 0.5;
+}
+.map-node {
+  cursor: pointer;
+}
+.map-node-dot {
+  stroke-width: 2;
+  transition: r 0.15s ease;
+}
+.map-node:hover .map-node-dot {
+  r: 16;
+}
+.map-node-open .map-node-dot {
+  fill: rgba(0, 230, 118, 0.15);
+  stroke: var(--neon-purple);
+}
+.map-node-here .map-node-dot {
+  fill: rgba(255, 209, 102, 0.2);
+  stroke: var(--neon-gold);
+}
+.map-node-locked .map-node-dot {
+  fill: rgba(134, 147, 136, 0.1);
+  stroke: var(--text-dim);
+}
+.map-node-pulse {
+  fill: none;
+  stroke: var(--neon-gold);
+  stroke-width: 2;
+  opacity: 0.6;
+  animation: map-pulse 2s ease-out infinite;
+}
+@keyframes map-pulse {
+  0% { r: 14; opacity: 0.7; }
+  100% { r: 30; opacity: 0; }
+}
+.map-node-icon {
+  font-size: 14px;
+  text-anchor: middle;
+}
+.map-node-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  fill: var(--text);
+  text-anchor: middle;
+  letter-spacing: 0.5px;
+}
+.map-node-locked .map-node-label {
+  fill: var(--text-dim);
 }
 
 .owned-grid {
