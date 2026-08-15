@@ -929,6 +929,18 @@ body {
 .mg-result-text.ok { color: var(--text-dim); }
 .mg-result-text.fail { color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); }
 
+.mg-result-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px 10px;
+}
+.mg-result-icon { font-size: 3rem; }
+.mg-result-screen .mg-result-text { font-size: 1.6rem; letter-spacing: 3px; }
+.mg-result-detail { color: var(--text-dim); font-size: 0.9rem; }
+
 /* Charge & release */
 .mg-charge-track {
   position: relative;

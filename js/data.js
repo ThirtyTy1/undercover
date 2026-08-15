@@ -276,6 +276,8 @@ const BILL_CYCLE_SECONDS = 86400; // how often rent/property tax/insurance/salar
 const MAX_RENTALS = 2; // apartments you can rent at once, on top of 1 owned house
 const BILL_CAR_INSURANCE_RATE = 0.015; // insurance due per cycle, as a fraction of the car's cost
 const BILL_AGENT_SALARY_RATE = 0.05; // salary due per cycle, as a fraction of the agent's base hire cost — miss it and they quit
+const PAY_EARLY_WINDOW_HOURS = 10; // bills can only be paid early once this close to their due date
+const PAY_EARLY_WINDOW_MS = PAY_EARLY_WINDOW_HOURS * 60 * 60 * 1000;
 
 const HOUSES = {
   rent: [

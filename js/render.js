@@ -352,15 +352,20 @@ function sportsbookHTML() {
   function matchupCard(m) {
     const multA = sportsMultiplier(m.probA);
     const multB = sportsMultiplier(1 - m.probA);
+    const locked = state.sportsBetsPlaced.includes(m.id);
     const selA = sportsSelection && sportsSelection.matchupId === m.id && sportsSelection.side === "A";
     const selB = sportsSelection && sportsSelection.matchupId === m.id && sportsSelection.side === "B";
     return `
-      <div class="card">
+      <div class="card ${locked ? "locked" : ""}">
         <div class="card-title">${m.teamA} vs ${m.teamB}</div>
-        <div class="crypto-action-group">
-          <button class="btn ${selA ? "equipped" : ""}" data-action="sports-select" data-id="${m.id}" data-side="A">${m.teamA} — ${multA.toFixed(2)}x</button>
-          <button class="btn ${selB ? "equipped" : ""}" data-action="sports-select" data-id="${m.id}" data-side="B">${m.teamB} — ${multB.toFixed(2)}x</button>
-        </div>
+        ${
+          locked
+            ? `<div class="locked-tag">Already bet — locked until next rotation</div>`
+            : `<div class="crypto-action-group">
+                <button class="btn ${selA ? "equipped" : ""}" data-action="sports-select" data-id="${m.id}" data-side="A">${m.teamA} — ${multA.toFixed(2)}x</button>
+                <button class="btn ${selB ? "equipped" : ""}" data-action="sports-select" data-id="${m.id}" data-side="B">${m.teamB} — ${multB.toFixed(2)}x</button>
+              </div>`
+        }
       </div>`;
   }
 
@@ -586,13 +591,15 @@ function housingTabHTML() {
       const due = residence.type === "rent" ? h.rentCost : h.taxCost;
       const label = residence.type === "rent" ? "Rent" : "Property tax";
       const remain = residence.nextBillAt ? Math.max(0, residence.nextBillAt - Date.now()) / 1000 : 0;
+      const payable = remain * 1000 <= PAY_EARLY_WINDOW_MS;
       return `
         <div class="active-contract">
           <div class="active-title">${h.name} (${residence.type === "rent" ? "renting" : "owned"})</div>
           <div class="card-row">${label} due in ${formatDuration(remain)} — ${fmt(due)}</div>
           <div class="card-row">-${Math.round(h.heatReduction * 100)}% heat gain</div>
+          ${!payable ? `<div class="hint">Payable within ${PAY_EARLY_WINDOW_HOURS}h of the due date</div>` : ""}
           <div class="crypto-action-group">
-            <button class="btn" data-action="pay-bill-early" data-type="${residence.type}" data-id="${residence.id}" ${state.cash < due ? "disabled" : ""}>Pay ${label} Now — ${fmt(due)}</button>
+            <button class="btn" data-action="pay-bill-early" data-type="${residence.type}" data-id="${residence.id}" ${!payable || state.cash < due ? "disabled" : ""}>Pay ${label} Now — ${fmt(due)}</button>
             ${
               residence.type === "own"
                 ? `<button class="btn sell" data-action="sell-house" data-id="${residence.id}">Sell house — ${fmt(Math.round(h.cost * SELL_RATE))}</button>`
@@ -684,11 +691,13 @@ function billsTabHTML() {
     const due = residence.type === "rent" ? h.rentCost : h.taxCost;
     const label = residence.type === "rent" ? "Rent" : "Property Tax";
     const remain = residence.nextBillAt ? Math.max(0, residence.nextBillAt - Date.now()) / 1000 : 0;
+    const payable = remain * 1000 <= PAY_EARLY_WINDOW_MS;
     return `
       <div class="card">
         <div class="card-title">${h.name}</div>
         <div class="card-row">${label} — due in ${formatDuration(remain)}</div>
-        <button class="btn" data-action="pay-bill-early" data-type="${residence.type}" data-id="${residence.id}" ${state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
+        ${!payable ? `<div class="hint">Payable within ${PAY_EARLY_WINDOW_HOURS}h of the due date</div>` : ""}
+        <button class="btn" data-action="pay-bill-early" data-type="${residence.type}" data-id="${residence.id}" ${!payable || state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
       </div>`;
   }).join("");
 
@@ -697,11 +706,13 @@ function billsTabHTML() {
     const due = carInsuranceCost(c);
     const nextAt = state.carBills[c.id];
     const remain = nextAt ? Math.max(0, nextAt - Date.now()) / 1000 : 0;
+    const payable = remain * 1000 <= PAY_EARLY_WINDOW_MS;
     return `
       <div class="card">
         <div class="card-title">${c.name}</div>
         <div class="card-row">Insurance — due in ${formatDuration(remain)}</div>
-        <button class="btn" data-action="pay-car-bill" data-id="${c.id}" ${state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
+        ${!payable ? `<div class="hint">Payable within ${PAY_EARLY_WINDOW_HOURS}h of the due date</div>` : ""}
+        <button class="btn" data-action="pay-car-bill" data-id="${c.id}" ${!payable || state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
       </div>`;
   }).join("");
 
@@ -710,12 +721,14 @@ function billsTabHTML() {
     if (!type) return "";
     const due = agentSalaryCost(type);
     const remain = unit.nextBillAt ? Math.max(0, unit.nextBillAt - Date.now()) / 1000 : 0;
+    const payable = remain * 1000 <= PAY_EARLY_WINDOW_MS;
     return `
       <div class="card">
         <div class="card-title">${type.name}</div>
         <div class="card-row">Salary — due in ${formatDuration(remain)}</div>
         <div class="card-row hint">Miss it and they quit.</div>
-        <button class="btn" data-action="pay-agent-salary" data-id="${unit.id}" ${state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
+        ${!payable ? `<div class="hint">Payable within ${PAY_EARLY_WINDOW_HOURS}h of the due date</div>` : ""}
+        <button class="btn" data-action="pay-agent-salary" data-id="${unit.id}" ${!payable || state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
       </div>`;
   }).join("");
 
@@ -1145,6 +1158,9 @@ function openMinigameModal(contract, onDone) {
   document.getElementById("mg-title").textContent = contract.mgTitle;
   document.getElementById("mg-flavor").textContent = contract.mgFlavor;
   document.getElementById("minigame-overlay").classList.remove("hidden");
+  const skipBtn = document.getElementById("mg-skip");
+  skipBtn.textContent = "Skip (small penalty)";
+  skipBtn.onclick = null;
 
   const weapon = WEAPONS.find((w) => w.id === state.equippedWeapon);
   document.getElementById("mg-loadout").innerHTML = weapon
@@ -1177,6 +1193,23 @@ function closeMinigameModal() {
   document.getElementById("minigame-overlay").classList.add("hidden");
   document.getElementById("mg-body").innerHTML = "";
   window.__mgDone = null;
+}
+
+function showMinigameResult(result) {
+  document.getElementById("mg-title").textContent = result.success ? "CONTRACT COMPLETE" : "CONTRACT FAILED";
+  document.getElementById("mg-flavor").textContent = result.contractName;
+  document.getElementById("mg-loadout").innerHTML = "";
+  document.getElementById("mg-body").innerHTML = `
+    <div class="mg-result-screen">
+      <div class="mg-result-icon">${result.success ? "✅" : "❌"}</div>
+      <div class="mg-result-text ${result.success ? "great" : "fail"}">${result.success ? "PASSED" : "FAILED"}</div>
+      <div class="mg-result-detail">${
+        result.success ? `+${fmt(result.payout)} · +${result.repGain} rep · +${Math.round(result.heatGain)} heat` : `No payout · +${Math.round(result.heatGain)} heat`
+      }</div>
+    </div>`;
+  const skipBtn = document.getElementById("mg-skip");
+  skipBtn.textContent = "Continue";
+  skipBtn.onclick = () => closeMinigameModal();
 }
 
 document.getElementById("mg-skip").addEventListener("click", () => {

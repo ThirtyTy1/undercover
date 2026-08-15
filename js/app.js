@@ -39,6 +39,7 @@ function freshState() {
     currentCity: "detroit",
     highestTierSeen: tierForRep(400), // matches the starting rep so the first contract doesn't trigger a retroactive promotion windfall
     lastSpecialSlotCompleted: null,
+    sportsBetsPlaced: [], // matchup ids already wagered on this rotation — locked out until the board rotates
   };
 }
 
@@ -230,24 +231,28 @@ function playContract(contractId) {
   if (!c) return;
   currentContractInPlay = contractId;
   openMinigameModal(c, (performance) => {
-    closeMinigameModal();
-    resolveContract(contractId, performance);
+    window.__mgSession = (window.__mgSession || 0) + 1; // invalidate any late-firing minigame internals before showing the result
+    const result = resolveContract(contractId, performance);
+    if (result) showMinigameResult(result);
+    else closeMinigameModal();
   });
 }
 
 function skipMinigame() {
-  closeMinigameModal();
-  if (currentContractInPlay) resolveContract(currentContractInPlay, 0.35);
+  window.__mgSession = (window.__mgSession || 0) + 1; // invalidate any late-firing minigame internals before showing the result
+  const result = currentContractInPlay ? resolveContract(currentContractInPlay, 0.35) : null;
+  if (result) showMinigameResult(result);
+  else closeMinigameModal();
 }
 
 function resolveContract(contractId, performance) {
   const ac = state.activeContracts.find((a) => a.contractId === contractId);
   currentContractInPlay = null;
-  if (!ac) return;
+  if (!ac) return null;
   const c = findContractById(ac.contractId);
   if (!c) {
     state.activeContracts = state.activeContracts.filter((a) => a !== ac);
-    return;
+    return null;
   }
   const heatPenalty = Math.min(state.heat / 250, 0.3); // high heat hurts odds
   const chanceBonus = (performance - 0.5) * 0.4; // mini-game performance: -0.2 to +0.2
@@ -260,13 +265,16 @@ function resolveContract(contractId, performance) {
   }
   const heatReduction = Math.min(totalHeatReduction(), 0.6);
   const heatGain = c.heat * (1 - heatReduction);
+  let payout = 0;
+  let repGain = 0;
+  let finalHeatGain = heatGain;
 
   if (success) {
     const payoutBoost = sumFlexEffect("payoutBoost");
     const repBoost = sumFlexEffect("repBoost");
     const payoutMult = 0.85 + performance * 0.35; // mini-game performance: 0.85x to 1.2x
-    const payout = Math.round(c.payout * (1 + payoutBoost) * payoutMult);
-    const repGain = Math.round(c.rep * (1 + repBoost));
+    payout = Math.round(c.payout * (1 + payoutBoost) * payoutMult);
+    repGain = Math.round(c.rep * (1 + repBoost));
     state.cash += payout;
     addRep(repGain);
     state.heat = Math.min(100, state.heat + heatGain);
@@ -275,9 +283,10 @@ function resolveContract(contractId, performance) {
     if (c.special) state.lastSpecialSlotCompleted = currentSpecialSlot();
     addLog(`✅ ${c.name} complete. +${fmt(payout)}, +${repGain} rep, +${Math.round(heatGain)} heat`, "success");
   } else {
-    state.heat = Math.min(100, state.heat + heatGain * 1.5);
+    finalHeatGain = heatGain * 1.5;
+    state.heat = Math.min(100, state.heat + finalHeatGain);
     state.stats.contractsFailed++;
-    addLog(`❌ ${c.name} blown. No payout, +${Math.round(heatGain * 1.5)} heat`, "fail");
+    addLog(`❌ ${c.name} blown. No payout, +${Math.round(finalHeatGain)} heat`, "fail");
   }
 
   state.activeContracts = state.activeContracts.filter((a) => a !== ac);
@@ -288,6 +297,8 @@ function resolveContract(contractId, performance) {
 
   save();
   render();
+
+  return { success, contractName: c.name, payout, repGain, heatGain: finalHeatGain };
 }
 
 function triggerBurned() {
@@ -432,7 +443,9 @@ function processCarBills() {
 }
 
 function payCarBillEarly(carId) {
-  if (!state.carBills[carId]) return;
+  const nextAt = state.carBills[carId];
+  if (!nextAt) return;
+  if (nextAt - Date.now() > PAY_EARLY_WINDOW_MS) return;
   payCarBill(carId);
   save();
   render();
@@ -547,6 +560,7 @@ function processBilling() {
 function payBillEarly(type, id) {
   const residence = state.residences.find((r) => r.type === type && r.id === id);
   if (!residence) return;
+  if (residence.nextBillAt && residence.nextBillAt - Date.now() > PAY_EARLY_WINDOW_MS) return;
   payResidenceBill(residence);
   save();
   render();
@@ -703,6 +717,7 @@ function processAgentSalaries() {
 function payAgentSalaryEarly(instanceId) {
   const unit = state.hiredAgents.find((u) => u.id === instanceId);
   if (!unit) return;
+  if (unit.nextBillAt && unit.nextBillAt - Date.now() > PAY_EARLY_WINDOW_MS) return;
   payAgentSalary(unit);
   save();
   render();
@@ -1191,12 +1206,14 @@ function clearSportsBet() {
 
 function selectSportsBet(matchupId, side) {
   if (sportsGame && sportsGame.phase === "live") return;
+  if (state.sportsBetsPlaced.includes(matchupId)) return;
   sportsSelection = { matchupId, side };
   render();
 }
 
 function placeSportsBet(amount) {
   if (!sportsSelection) return;
+  if (state.sportsBetsPlaced.includes(sportsSelection.matchupId)) return;
   amount = Math.floor(Math.min(amount, state.cash));
   if (amount <= 0 || (sportsGame && sportsGame.phase === "live")) return;
   const board = currentSportsBoard();
@@ -1206,6 +1223,10 @@ function placeSportsBet(amount) {
   state.cash -= amount;
   sportsGame = { matchupId: m.id, side, bet: amount, matchup: m, phase: "live", resultText: null };
   sportsSelection = null;
+  // a matchup is locked out for further betting once wagered on, until the board rotates —
+  // prune any ids left over from past rotations while we're at it
+  state.sportsBetsPlaced = state.sportsBetsPlaced.filter((id) => board.some((g) => g.id === id));
+  state.sportsBetsPlaced.push(m.id);
   save();
   render();
 
