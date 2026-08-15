@@ -39,6 +39,9 @@ const CITIES = [
   { id: "detroit", name: "Detroit", desc: "Home base. Where it all started.", requiresJet: false },
   { id: "miami", name: "Miami", desc: "Luxury nightlife, yachts, and cartel money.", requiresJet: true },
   { id: "tokyo", name: "Tokyo", desc: "A high-end underground market most crews never see.", requiresJet: true },
+  { id: "losangeles", name: "Los Angeles", desc: "Studio money, gang territory, and star power.", requiresJet: true },
+  { id: "newyork", name: "New York", desc: "Wall Street fronts and old-money crime families.", requiresJet: true },
+  { id: "vegas", name: "Las Vegas", desc: "Casinos, skimming operations, and desert graves.", requiresJet: true },
 ];
 const TRAVEL_COST = 8000;
 
@@ -91,6 +94,27 @@ const CONTRACTS = [
     minigame: "charge", mgTitle: "Back Room", mgFlavor: "He only turns his back once. Take it." },
   { id: "c20", name: "Underground Auction", city: "tokyo", tier: 5, payout: 1400000, rep: 1350, duration: 145, baseChance: 0.19, heat: 74,
     minigame: "drag", mgTitle: "Bidder's Vault", mgFlavor: "Crack the lot case before the gavel falls." },
+  // Los Angeles exclusive — requires flying in on a private jet
+  { id: "c21", name: "Studio Fixer", city: "losangeles", tier: 3, payout: 520000, rep: 710, duration: 92, baseChance: 0.29, heat: 51,
+    minigame: "charge", mgTitle: "Damage Control", mgFlavor: "Get to him before the story breaks." },
+  { id: "c22", name: "Gang Territory Boss", city: "losangeles", tier: 4, payout: 920000, rep: 1020, duration: 112, baseChance: 0.25, heat: 63,
+    minigame: "rapidfire", mgTitle: "Block Party", mgFlavor: "His whole block is watching. Move fast." },
+  { id: "c23", name: "Award Show Hit", city: "losangeles", tier: 5, payout: 1320000, rep: 1310, duration: 142, baseChance: 0.2, heat: 73,
+    minigame: "aim", mgTitle: "Red Carpet", mgFlavor: "One shot, in front of every camera in town." },
+  // New York exclusive — requires flying in on a private jet
+  { id: "c24", name: "Wall Street Ghost", city: "newyork", tier: 3, payout: 540000, rep: 715, duration: 93, baseChance: 0.29, heat: 51,
+    minigame: "breach", mgTitle: "Trading Floor", mgFlavor: "Crack his terminal before the closing bell." },
+  { id: "c25", name: "Family Underboss", city: "newyork", tier: 4, payout: 940000, rep: 1030, duration: 113, baseChance: 0.25, heat: 63,
+    minigame: "charge", mgTitle: "Sit-Down", mgFlavor: "Old-school rules. One clean move." },
+  { id: "c26", name: "The Commission", city: "newyork", tier: 5, payout: 1350000, rep: 1320, duration: 143, baseChance: 0.2, heat: 73,
+    minigame: "rapidfire", mgTitle: "Five Families", mgFlavor: "Every boss in the room has a gun under the table." },
+  // Las Vegas exclusive — requires flying in on a private jet
+  { id: "c27", name: "Casino Skimmer", city: "vegas", tier: 3, payout: 530000, rep: 712, duration: 92, baseChance: 0.29, heat: 51,
+    minigame: "drag", mgTitle: "The Count Room", mgFlavor: "Match the vault sequence before the eye in the sky notices." },
+  { id: "c28", name: "Pit Boss", city: "vegas", tier: 4, payout: 930000, rep: 1025, duration: 112, baseChance: 0.25, heat: 63,
+    minigame: "aim", mgTitle: "High Roller Suite", mgFlavor: "Catch him alone between hands." },
+  { id: "c29", name: "The House Always Wins", city: "vegas", tier: 5, payout: 1330000, rep: 1315, duration: 143, baseChance: 0.2, heat: 73,
+    minigame: "breach", mgTitle: "Eye in the Sky", mgFlavor: "Blind every camera before they blind you." },
 ];
 
 // Rotating special contract — one is always live, and it swaps out for a new one every
@@ -362,6 +386,20 @@ const BUSINESS_CONDITION_DECAY = 5; // % lost per cycle
 const BUSINESS_CONDITION_MIN_INCOME_MULT = 0.3; // income floor at 0% condition
 const BUSINESS_MAINTAIN_COST_PCT = 0.05; // upkeep cost as a fraction of the business's purchase cost
 
+// Working a shift is a hands-on way to squeeze extra cash out of an owned business
+// beyond the passive payout cycle, gated by a cooldown so it's a bonus, not a grind.
+const BUSINESS_SHIFT_COOLDOWN_SECONDS = 180;
+const BUSINESS_SHIFT_MIN_MULT = 1.5; // bonus cash as a multiple of the business's per-cycle income
+const BUSINESS_SHIFT_MAX_MULT = 3;
+
+// Throwing a party at your place — costs cash up front, pays back in rep and a
+// randomized cash haul from guests, at the price of some heat from the noise.
+const HOUSE_EVENTS = [
+  { id: "ev1", name: "Small Get-Together", desc: "Invite a few close contacts over.", cost: 2000, repGain: 15, cashRange: [500, 1500], heatGain: 3 },
+  { id: "ev2", name: "House Party", desc: "Open the doors, let word spread.", cost: 12000, repGain: 60, cashRange: [3000, 9000], heatGain: 10 },
+  { id: "ev3", name: "Blowout Bash", desc: "Go all out — the whole scene shows up.", cost: 60000, repGain: 220, cashRange: [15000, 40000], heatGain: 22 },
+];
+
 const BUSINESSES = [
   {
     id: "gunstore",
@@ -412,6 +450,18 @@ const BUSINESSES = [
     repReq: 100,
   },
   {
+    id: "bar",
+    name: "Dive Bar",
+    desc: "Cash-only, back room deals, nobody asks questions.",
+    cost: 600000,
+    income: 8000,
+    heatReduction: 0.045,
+    perk: "drugSellBoost",
+    perkAmount: 0.12,
+    perkLabel: "+12% on drug sale offers",
+    repReq: 300,
+  },
+  {
     id: "realestate",
     name: "Real Estate Office",
     desc: "Buys and flips property — including your own.",
@@ -422,6 +472,18 @@ const BUSINESSES = [
     perkAmount: 0.1,
     perkLabel: "-10% house prices",
     repReq: 1000,
+  },
+  {
+    id: "nightclub",
+    name: "Nightclub",
+    desc: "VIP tables, bottle service, and a back office that never closes.",
+    cost: 1500000,
+    income: 12000,
+    heatReduction: 0.05,
+    perk: "watchSellBoost",
+    perkAmount: 0.12,
+    perkLabel: "+12% on watch sale offers",
+    repReq: 700,
   },
   {
     id: "importexport",

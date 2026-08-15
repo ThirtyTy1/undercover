@@ -25,6 +25,7 @@ function freshState() {
     businesses: [],
     businessCondition: {}, // id -> 0..100, decays each payout cycle, restored by maintainBusiness()
     nextBusinessPayoutAt: null,
+    businessShiftCooldown: {}, // id -> timestamp when runBusinessShift() is available again
     drugInventory: { weed: 0, pens: 0, shrooms: 0, coke: 0 },
     drugRequests: [],
     nextDrugRequestAt: null,
@@ -434,6 +435,23 @@ function moveOut(id) {
   render();
 }
 
+function throwHouseEvent(id) {
+  const ev = HOUSE_EVENTS.find((e) => e.id === id);
+  if (!ev) return;
+  if (state.residences.length === 0) return;
+  if (state.cash < ev.cost) return;
+  state.cash -= ev.cost;
+  const [lo, hi] = ev.cashRange;
+  const haul = lo + Math.floor(Math.random() * (hi - lo + 1));
+  state.cash += haul;
+  state.stats.totalEarned += haul;
+  addRep(ev.repGain);
+  state.heat = Math.min(100, state.heat + ev.heatGain);
+  addLog(`${ev.name}: +${ev.repGain} rep, +${fmt(haul)} from guests, +${ev.heatGain} heat`, "success");
+  save();
+  render();
+}
+
 function payResidenceBill(residence) {
   const h = houseData(residence);
   if (!h) {
@@ -660,6 +678,25 @@ function maintainBusiness(id) {
   state.cash -= cost;
   state.businessCondition[id] = 100;
   addLog(`Maintained ${b.name} for ${fmt(cost)} — back to full condition`, "buy");
+  save();
+  render();
+}
+
+function businessShiftReady(id) {
+  const readyAt = state.businessShiftCooldown[id];
+  return !readyAt || Date.now() >= readyAt;
+}
+
+function runBusinessShift(id) {
+  const b = BUSINESSES.find((b) => b.id === id);
+  if (!b || !businessOwned(id) || !businessShiftReady(id)) return;
+  const mult = BUSINESS_SHIFT_MIN_MULT + Math.random() * (BUSINESS_SHIFT_MAX_MULT - BUSINESS_SHIFT_MIN_MULT);
+  const bonus = Math.round(businessEffectiveIncome(b) * mult);
+  state.cash += bonus;
+  state.stats.totalEarned += bonus;
+  state.stats.businessIncomeTotal += bonus;
+  state.businessShiftCooldown[id] = Date.now() + BUSINESS_SHIFT_COOLDOWN_SECONDS * 1000;
+  addLog(`Worked a shift at ${b.name} — +${fmt(bonus)}`, "success");
   save();
   render();
 }
@@ -1131,7 +1168,7 @@ function generateDrugRequest() {
   const [lo, hi] = DRUG_REQUEST_QTY_RANGE[d.id];
   const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
   const priceFactor = 0.7 + Math.random() * 0.25; // customers lowball a bit
-  const offerPrice = Math.round(d.baseSellPrice * qty * priceFactor);
+  const offerPrice = Math.round(d.baseSellPrice * qty * priceFactor * (1 + businessPerk("drugSellBoost")));
   state.drugRequests.push({
     id: "req" + Date.now() + Math.floor(Math.random() * 1000),
     drugId: d.id,
@@ -1335,7 +1372,7 @@ function generateWatchOrder() {
   const [lo, hi] = WATCH_ORDER_QTY_RANGE[w.id];
   const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
   const priceFactor = 0.7 + Math.random() * 0.25;
-  const offerPrice = Math.round(w.sellPrice * qty * priceFactor);
+  const offerPrice = Math.round(w.sellPrice * qty * priceFactor * (1 + businessPerk("watchSellBoost")));
   state.watchOrders.push({
     id: "worder" + Date.now() + Math.floor(Math.random() * 1000),
     watchId: w.id,

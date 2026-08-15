@@ -580,7 +580,22 @@ function housingTabHTML() {
     })
     .join("");
 
+  const hasResidence = rentals.length > 0 || !!owned;
+  const eventCards = HOUSE_EVENTS.map(
+    (ev) => `
+      <div class="card">
+        <div class="card-title">${ev.name}</div>
+        <div class="card-row">${ev.desc}</div>
+        <div class="card-row">+${ev.repGain} rep · ${fmt(ev.cashRange[0])}–${fmt(ev.cashRange[1])} from guests · +${ev.heatGain} heat</div>
+        <button class="btn" data-action="throw-house-event" data-id="${ev.id}" ${!hasResidence || state.cash < ev.cost ? "disabled" : ""}>Throw — ${fmt(ev.cost)}</button>
+      </div>`
+  ).join("");
+  const eventsSection = hasResidence
+    ? `<h3 class="cat-heading">Throw an Event</h3><div class="grid">${eventCards}</div>`
+    : `<h3 class="cat-heading">Throw an Event</h3><div class="card-row">Get a place first — no venue, no party.</div>`;
+
   return `${currentHTML}
+    ${eventsSection}
     <h3 class="cat-heading">Rentals (${rentalCount}/${MAX_RENTALS})</h3><div class="grid">${rentCards}</div>
     <h3 class="cat-heading">Own (${owned ? 1 : 0}/1)</h3><div class="grid">${buyCards}</div>`;
 }
@@ -796,6 +811,8 @@ function businessesTabHTML() {
     const locked = state.rep < b.repReq;
     const condition = owned ? state.businessCondition[b.id] ?? 100 : 100;
     const maintainCost = businessMaintainCost(b);
+    const shiftReady = owned && businessShiftReady(b.id);
+    const shiftRemain = owned && !shiftReady ? Math.max(0, Math.ceil((state.businessShiftCooldown[b.id] - Date.now()) / 1000)) : 0;
     return `
       <div class="card ${locked ? "locked" : ""} ${owned ? "owned" : ""}">
         <div class="card-title">${b.name}</div>
@@ -807,6 +824,7 @@ function businessesTabHTML() {
             ? `
               <div class="card-row">Condition: ${Math.round(condition)}% — earning ${fmt(businessEffectiveIncome(b))} / cycle</div>
               <div class="heat-bar"><div class="heat-fill" style="width:${condition}%;background:${condition > 50 ? "linear-gradient(90deg, var(--neon-teal), #7fffb0)" : "linear-gradient(90deg, var(--neon-red), var(--neon-gold))"}"></div></div>
+              <button class="btn" data-action="run-business-shift" data-id="${b.id}" ${shiftReady ? "" : "disabled"}>${shiftReady ? "Run a Shift" : `Shift cooldown — ${shiftRemain}s`}</button>
               <button class="btn" data-action="maintain-business" data-id="${b.id}" ${condition >= 100 || state.cash < maintainCost ? "disabled" : ""}>Maintain — ${fmt(maintainCost)}</button>
               <button class="btn sell" data-action="sell-business" data-id="${b.id}">Sell — ${fmt(Math.round(b.cost * SELL_RATE))}</button>`
             : locked
@@ -820,12 +838,18 @@ function businessesTabHTML() {
 }
 
 const CITY_MAP_POS = {
-  detroit: { x: 95, y: 100 },
-  miami: { x: 330, y: 185 },
-  tokyo: { x: 520, y: 55 },
+  detroit: { x: 80, y: 110 },
+  newyork: { x: 180, y: 50 },
+  miami: { x: 210, y: 185 },
+  losangeles: { x: 300, y: 90 },
+  vegas: { x: 340, y: 155 },
+  tokyo: { x: 530, y: 50 },
 };
 const CITY_ROUTES = [
+  ["detroit", "newyork"],
   ["detroit", "miami"],
+  ["detroit", "losangeles"],
+  ["detroit", "vegas"],
   ["detroit", "tokyo"],
 ];
 
@@ -850,7 +874,7 @@ function territoryMapSVG(ownedJet) {
       </g>`;
   }).join("");
 
-  return `<svg viewBox="0 0 600 230" class="territory-map">${routeLines}${nodes}</svg>`;
+  return `<svg viewBox="0 0 600 225" class="territory-map">${routeLines}${nodes}</svg>`;
 }
 
 function worldTabHTML() {
@@ -897,6 +921,8 @@ function bindTabEvents() {
       else if (action === "buy-business") buyBusiness(id);
       else if (action === "sell-business") sellBusiness(id);
       else if (action === "maintain-business") maintainBusiness(id);
+      else if (action === "run-business-shift") runBusinessShift(id);
+      else if (action === "throw-house-event") throwHouseEvent(id);
       else if (action === "travel-city") travelToCity(id);
       else if (action === "export-save") exportSave();
       else if (action === "import-save-trigger") document.getElementById("import-save-input").click();
