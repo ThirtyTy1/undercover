@@ -40,6 +40,7 @@ function freshState() {
     highestTierSeen: tierForRep(400), // matches the starting rep so the first contract doesn't trigger a retroactive promotion windfall
     lastSpecialSlotCompleted: null,
     sportsBetsPlaced: [], // matchup ids already wagered on this rotation — locked out until the board rotates
+    houseEventsThrown: [], // timestamps of thrown house events, pruned to a rolling 24h window
   };
 }
 
@@ -506,11 +507,18 @@ function moveOut(id) {
   render();
 }
 
+function houseEventsThrownToday() {
+  const dayMs = 24 * 60 * 60 * 1000;
+  state.houseEventsThrown = state.houseEventsThrown.filter((t) => Date.now() - t < dayMs);
+  return state.houseEventsThrown.length;
+}
+
 function throwHouseEvent(id) {
   const ev = HOUSE_EVENTS.find((e) => e.id === id);
   if (!ev) return;
   if (state.residences.length === 0) return;
   if (state.cash < ev.cost) return;
+  if (houseEventsThrownToday() >= HOUSE_EVENTS_MAX_PER_DAY) return;
   state.cash -= ev.cost;
   const [lo, hi] = ev.cashRange;
   const haul = lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -518,6 +526,7 @@ function throwHouseEvent(id) {
   state.stats.totalEarned += haul;
   addRep(ev.repGain);
   state.heat = Math.min(100, state.heat + ev.heatGain);
+  state.houseEventsThrown.push(Date.now());
   addLog(`${ev.name}: +${ev.repGain} rep, +${fmt(haul)} from guests, +${ev.heatGain} heat`, "success");
   save();
   render();

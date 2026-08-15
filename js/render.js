@@ -661,18 +661,23 @@ function housingTabHTML() {
     .join("");
 
   const hasResidence = rentals.length > 0 || !!owned;
+  const eventsThrown = houseEventsThrownToday();
+  const atDailyCap = eventsThrown >= HOUSE_EVENTS_MAX_PER_DAY;
   const eventCards = HOUSE_EVENTS.map(
     (ev) => `
       <div class="card">
         <div class="card-title">${ev.name}</div>
         <div class="card-row">${ev.desc}</div>
         <div class="card-row">+${ev.repGain} rep · ${fmt(ev.cashRange[0])}–${fmt(ev.cashRange[1])} from guests · +${ev.heatGain} heat</div>
-        <button class="btn" data-action="throw-house-event" data-id="${ev.id}" ${!hasResidence || state.cash < ev.cost ? "disabled" : ""}>Throw — ${fmt(ev.cost)}</button>
+        <button class="btn" data-action="throw-house-event" data-id="${ev.id}" ${!hasResidence || atDailyCap || state.cash < ev.cost ? "disabled" : ""}>Throw — ${fmt(ev.cost)}</button>
       </div>`
   ).join("");
-  const eventsSection = hasResidence
-    ? `<h3 class="cat-heading">Throw an Event</h3><div class="grid">${eventCards}</div>`
-    : `<h3 class="cat-heading">Throw an Event</h3><div class="card-row">Get a place first — no venue, no party.</div>`;
+  const eventsHeading = `Throw an Event (${eventsThrown}/${HOUSE_EVENTS_MAX_PER_DAY} today)`;
+  const eventsSection = !hasResidence
+    ? `<h3 class="cat-heading">${eventsHeading}</h3><div class="card-row">Get a place first — no venue, no party.</div>`
+    : atDailyCap
+    ? `<h3 class="cat-heading">${eventsHeading}</h3><div class="card-row">You've hit today's limit — come back tomorrow.</div><div class="grid">${eventCards}</div>`
+    : `<h3 class="cat-heading">${eventsHeading}</h3><div class="grid">${eventCards}</div>`;
 
   return `${currentHTML}
     ${eventsSection}
@@ -1230,6 +1235,15 @@ function togglePhone() {
   if (opening) renderPhoneHome();
 }
 
+// Replacing phone-body's innerHTML resets its scroll position — this preserves it,
+// so buying stock (etc.) mid-list doesn't jump the view back to the top.
+function setPhoneBody(html) {
+  const el = document.getElementById("phone-body");
+  const scrollTop = el.scrollTop;
+  el.innerHTML = html;
+  el.scrollTop = scrollTop;
+}
+
 const HOME_APPS = [
   { icon: "📞", label: "Contacts", bg: "linear-gradient(160deg,#3ddc73,#1a8f45)" },
   { icon: "💬", label: "Messages", bg: "linear-gradient(160deg,#3ddc73,#1a8f45)" },
@@ -1263,7 +1277,7 @@ function renderPhoneHome() {
   ).join("");
   const dockIcons = HOME_DOCK.map((a) => `<div class="home-dock-icon" style="background:${a.bg}" data-action="open-contacts">${a.icon}</div>`).join("");
 
-  document.getElementById("phone-body").innerHTML = `
+  setPhoneBody(`
     <div class="iphone-home">
       <div class="home-widgets">
         <div class="home-widget">
@@ -1280,7 +1294,7 @@ function renderPhoneHome() {
       <div class="home-app-grid">${appIcons}</div>
       <button class="home-search" data-action="open-contacts">🔍 Search</button>
       <div class="home-dock">${dockIcons}</div>
-    </div>`;
+    </div>`);
 }
 
 function closePhone() {
@@ -1295,43 +1309,75 @@ function renderPhoneContacts() {
   const pendingCount = state.drugRequests.length;
   const pendingGunOrders = state.gunOrders.length;
   const pendingWatchOrders = state.watchOrders.length;
-  const specialRows = `
-    <div class="phone-contact" data-contact="__requests__">
-      <div class="phone-contact-name">Customers ${pendingCount > 0 ? `<span class="phone-badge">${pendingCount}</span>` : ""}</div>
-      <div class="phone-contact-preview">${pendingCount > 0 ? `${pendingCount} buyer${pendingCount > 1 ? "s" : ""} waiting on you` : "No buyers right now"}</div>
-    </div>
-    <div class="phone-contact" data-contact="__plug__">
-      <div class="phone-contact-name">The Plug <span class="phone-contact-role">Supplier</span></div>
-      <div class="phone-contact-preview">Reup your stock</div>
-    </div>
-    <div class="phone-contact" data-contact="__armsdealer__">
-      <div class="phone-contact-name">Arms Dealer <span class="phone-contact-role">Supplier</span></div>
-      <div class="phone-contact-preview">Guns, wholesale</div>
-    </div>
-    <div class="phone-contact" data-contact="__gunorders__">
-      <div class="phone-contact-name">Gun Orders ${pendingGunOrders > 0 ? `<span class="phone-badge">${pendingGunOrders}</span>` : ""}</div>
-      <div class="phone-contact-preview">${pendingGunOrders > 0 ? `${pendingGunOrders} order${pendingGunOrders > 1 ? "s" : ""} waiting on you` : "No orders right now"}</div>
-    </div>
-    <div class="phone-contact" data-contact="__watchsupplier__">
-      <div class="phone-contact-name">Watch Supplier <span class="phone-contact-role">Supplier</span></div>
-      <div class="phone-contact-preview">Timepieces, wholesale</div>
-    </div>
-    <div class="phone-contact" data-contact="__watchorders__">
-      <div class="phone-contact-name">Watch Orders ${pendingWatchOrders > 0 ? `<span class="phone-badge">${pendingWatchOrders}</span>` : ""}</div>
-      <div class="phone-contact-preview">${pendingWatchOrders > 0 ? `${pendingWatchOrders} order${pendingWatchOrders > 1 ? "s" : ""} waiting on you` : "No orders right now"}</div>
-    </div>`;
 
-  const contactRows = CONTACTS.map((c) => {
-    const thread = state.phone.threads[c.id];
-    const preview = thread && thread.length ? thread[thread.length - 1].text : c.intro;
-    return `
-      <div class="phone-contact" data-contact="${c.id}">
-        <div class="phone-contact-name">${c.name} <span class="phone-contact-role">${c.role}</span></div>
-        <div class="phone-contact-preview">${preview}</div>
-      </div>`;
-  }).join("");
+  // Rows with a pending notification sort to the top (stable — ties keep their
+  // original order), so new orders/buyers surface without hunting through the list.
+  const rows = [
+    {
+      pending: pendingCount,
+      html: `
+        <div class="phone-contact" data-contact="__requests__">
+          <div class="phone-contact-name">Customers ${pendingCount > 0 ? `<span class="phone-badge">${pendingCount}</span>` : ""}</div>
+          <div class="phone-contact-preview">${pendingCount > 0 ? `${pendingCount} buyer${pendingCount > 1 ? "s" : ""} waiting on you` : "No buyers right now"}</div>
+        </div>`,
+    },
+    {
+      pending: 0,
+      html: `
+        <div class="phone-contact" data-contact="__plug__">
+          <div class="phone-contact-name">The Plug <span class="phone-contact-role">Supplier</span></div>
+          <div class="phone-contact-preview">Reup your stock</div>
+        </div>`,
+    },
+    {
+      pending: 0,
+      html: `
+        <div class="phone-contact" data-contact="__armsdealer__">
+          <div class="phone-contact-name">Arms Dealer <span class="phone-contact-role">Supplier</span></div>
+          <div class="phone-contact-preview">Guns, wholesale</div>
+        </div>`,
+    },
+    {
+      pending: pendingGunOrders,
+      html: `
+        <div class="phone-contact" data-contact="__gunorders__">
+          <div class="phone-contact-name">Gun Orders ${pendingGunOrders > 0 ? `<span class="phone-badge">${pendingGunOrders}</span>` : ""}</div>
+          <div class="phone-contact-preview">${pendingGunOrders > 0 ? `${pendingGunOrders} order${pendingGunOrders > 1 ? "s" : ""} waiting on you` : "No orders right now"}</div>
+        </div>`,
+    },
+    {
+      pending: 0,
+      html: `
+        <div class="phone-contact" data-contact="__watchsupplier__">
+          <div class="phone-contact-name">Watch Supplier <span class="phone-contact-role">Supplier</span></div>
+          <div class="phone-contact-preview">Timepieces, wholesale</div>
+        </div>`,
+    },
+    {
+      pending: pendingWatchOrders,
+      html: `
+        <div class="phone-contact" data-contact="__watchorders__">
+          <div class="phone-contact-name">Watch Orders ${pendingWatchOrders > 0 ? `<span class="phone-badge">${pendingWatchOrders}</span>` : ""}</div>
+          <div class="phone-contact-preview">${pendingWatchOrders > 0 ? `${pendingWatchOrders} order${pendingWatchOrders > 1 ? "s" : ""} waiting on you` : "No orders right now"}</div>
+        </div>`,
+    },
+    ...CONTACTS.map((c) => {
+      const thread = state.phone.threads[c.id];
+      const preview = thread && thread.length ? thread[thread.length - 1].text : c.intro;
+      return {
+        pending: 0,
+        html: `
+          <div class="phone-contact" data-contact="${c.id}">
+            <div class="phone-contact-name">${c.name} <span class="phone-contact-role">${c.role}</span></div>
+            <div class="phone-contact-preview">${preview}</div>
+          </div>`,
+      };
+    }),
+  ];
 
-  document.getElementById("phone-body").innerHTML = specialRows + contactRows;
+  rows.sort((a, b) => b.pending - a.pending);
+
+  setPhoneBody(rows.map((r) => r.html).join(""));
 }
 
 function renderPlugPanel() {
@@ -1352,7 +1398,7 @@ function renderPlugPanel() {
       </div>`;
   }).join("");
 
-  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+  setPhoneBody(`<div class="plug-panel">${rows}</div>`);
 }
 
 function renderArmsDealerPanel() {
@@ -1374,7 +1420,7 @@ function renderArmsDealerPanel() {
       </div>`;
   }).join("");
 
-  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+  setPhoneBody(`<div class="plug-panel">${rows}</div>`);
 }
 
 function renderGunOrdersView() {
@@ -1383,7 +1429,7 @@ function renderGunOrdersView() {
   document.getElementById("phone-back").classList.remove("hidden");
 
   if (state.gunOrders.length === 0) {
-    document.getElementById("phone-body").innerHTML = `<div class="hint">No orders right now. Check back soon.</div>`;
+    setPhoneBody(`<div class="hint">No orders right now. Check back soon.</div>`);
     return;
   }
 
@@ -1411,7 +1457,7 @@ function renderGunOrdersView() {
     })
     .join("");
 
-  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+  setPhoneBody(`<div class="plug-panel">${rows}</div>`);
 }
 
 function renderDrugRequestsView() {
@@ -1420,7 +1466,7 @@ function renderDrugRequestsView() {
   document.getElementById("phone-back").classList.remove("hidden");
 
   if (state.drugRequests.length === 0) {
-    document.getElementById("phone-body").innerHTML = `<div class="hint">No buyers right now. Check back soon.</div>`;
+    setPhoneBody(`<div class="hint">No buyers right now. Check back soon.</div>`);
     return;
   }
 
@@ -1447,7 +1493,7 @@ function renderDrugRequestsView() {
     })
     .join("");
 
-  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+  setPhoneBody(`<div class="plug-panel">${rows}</div>`);
 }
 
 function renderWatchSupplierPanel() {
@@ -1469,7 +1515,7 @@ function renderWatchSupplierPanel() {
       </div>`;
   }).join("");
 
-  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+  setPhoneBody(`<div class="plug-panel">${rows}</div>`);
 }
 
 function renderWatchOrdersView() {
@@ -1478,7 +1524,7 @@ function renderWatchOrdersView() {
   document.getElementById("phone-back").classList.remove("hidden");
 
   if (state.watchOrders.length === 0) {
-    document.getElementById("phone-body").innerHTML = `<div class="hint">No orders right now. Check back soon.</div>`;
+    setPhoneBody(`<div class="hint">No orders right now. Check back soon.</div>`);
     return;
   }
 
@@ -1506,7 +1552,7 @@ function renderWatchOrdersView() {
     })
     .join("");
 
-  document.getElementById("phone-body").innerHTML = `<div class="plug-panel">${rows}</div>`;
+  setPhoneBody(`<div class="plug-panel">${rows}</div>`);
 }
 
 function historySparkline(history, w, h) {
@@ -1533,7 +1579,7 @@ function renderBooksView() {
   const trend = history.length > 1 ? history[history.length - 1] - history[0] : 0;
   const trendCls = trend > 0 ? "great" : trend < 0 ? "fail" : "ok";
 
-  document.getElementById("phone-body").innerHTML = `
+  setPhoneBody(`
     <div class="books-hero">
       <div class="home-widget-label">Net Worth</div>
       <div class="books-networth">${fmt(netWorth())}</div>
@@ -1550,7 +1596,7 @@ function renderBooksView() {
       <div class="vault-stat-card"><span class="stat-label">Cash + Bank</span><span class="stat-value cash">${fmt(state.cash + state.bankBalance)}</span></div>
     </div>
     <div class="hint">Net worth is sampled every 10s this session — the chart resets when you close the tab.</div>
-  `;
+  `);
 }
 
 function renderPhoneThread(contactId) {

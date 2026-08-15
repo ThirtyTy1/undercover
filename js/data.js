@@ -43,7 +43,7 @@ const CITIES = [
   { id: "newyork", name: "New York", desc: "Wall Street fronts and old-money crime families.", requiresJet: true },
   { id: "vegas", name: "Las Vegas", desc: "Casinos, skimming operations, and desert graves.", requiresJet: true },
 ];
-const TRAVEL_COST = 8000;
+const TRAVEL_COST = 11600; // 8000 + 45%
 
 const MAX_ACTIVE_CONTRACTS = 2; // contracts you can have running at once
 
@@ -96,6 +96,8 @@ const CONTRACTS = [
     minigame: "charge", mgTitle: "Back Room", mgFlavor: "He only turns his back once. Take it." },
   { id: "c20", name: "Underground Auction", city: "tokyo", tier: 5, payout: 1400000, rep: 1350, duration: 72, baseChance: 0.19, heat: 74,
     minigame: "drag", mgTitle: "Bidder's Vault", mgFlavor: "Crack the lot case before the gavel falls." },
+  { id: "c30", name: "Tokyo Vault Heist", city: "tokyo", tier: 5, payout: 1749000, rep: 1700, duration: 85, baseChance: 0.16, heat: 80,
+    minigame: "breach", mgTitle: "The Vault", mgFlavor: "One shot at the biggest score Tokyo's ever seen." },
   // Los Angeles exclusive — requires flying in on a private jet
   { id: "c21", name: "Studio Fixer", city: "losangeles", tier: 3, payout: 520000, rep: 710, duration: 46, baseChance: 0.29, heat: 51,
     minigame: "charge", mgTitle: "Damage Control", mgFlavor: "Get to him before the story breaks." },
@@ -127,12 +129,7 @@ const SPECIAL_ROTATION_HOURS = 6;
 const SPECIAL_ROTATION_MS = SPECIAL_ROTATION_HOURS * 60 * 60 * 1000;
 
 const SPECIAL_CONTRACTS = [
-  { id: "sp1", special: true, name: "The Informant's Tip", tier: 0, payout: 1400, rep: 10, duration: 3, baseChance: 0.7, heat: 5,
-    minigame: "aim", mgTitle: "Burn the Source", mgFlavor: "He's about to talk. Get to him first." },
-  { id: "sp2", special: true, name: "High-Value Target", tier: 1, payout: 10000, rep: 45, duration: 11, baseChance: 0.5, heat: 20,
-    minigame: "breach", mgTitle: "Breach the Safehouse", mgFlavor: "Every second past the code adds risk." },
-  { id: "sp3", special: true, name: "The Big Score", tier: 2, payout: 68000, rep: 150, duration: 24, baseChance: 0.38, heat: 34,
-    minigame: "drag", mgTitle: "The Exchange", mgFlavor: "One shot to make the handoff clean." },
+  // Special contracts are high-value only now — no low-payout entries in the rotation.
   { id: "sp4", special: true, name: "Federal Witness", tier: 3, payout: 380000, rep: 520, duration: 42, baseChance: 0.3, heat: 48,
     minigame: "aim", mgTitle: "Silence the Witness", mgFlavor: "The trial starts tomorrow. He doesn't make it." },
   { id: "sp5", special: true, name: "Rival Family Boss", tier: 4, payout: 1000000, rep: 1000, duration: 52, baseChance: 0.24, heat: 58,
@@ -274,33 +271,33 @@ const FLEX_ITEMS = {
 const SELL_RATE = 0.5; // fraction of original cost refunded when selling
 const BILL_CYCLE_SECONDS = 86400; // how often rent/property tax/insurance/salary comes due (24h) — can also be paid early
 const MAX_RENTALS = 2; // apartments you can rent at once, on top of 1 owned house
-const BILL_CAR_INSURANCE_RATE = 0.015; // insurance due per cycle, as a fraction of the car's cost
-const BILL_AGENT_SALARY_RATE = 0.05; // salary due per cycle, as a fraction of the agent's base hire cost — miss it and they quit
+const BILL_CAR_INSURANCE_RATE = 0.018; // insurance due per cycle, as a fraction of the car's cost (0.015 + 23%, rounded)
+const BILL_AGENT_SALARY_RATE = 0.0615; // salary due per cycle, as a fraction of the agent's base hire cost (0.05 + 23%) — miss it and they quit
 const PAY_EARLY_WINDOW_HOURS = 10; // bills can only be paid early once this close to their due date
 const PAY_EARLY_WINDOW_MS = PAY_EARLY_WINDOW_HOURS * 60 * 60 * 1000;
 
 const HOUSES = {
   rent: [
-    { id: "rent1", name: "Studio Apartment", rentCost: 1350, heatReduction: 0.02, repReq: 0 },
-    { id: "rent2", name: "1BR Apartment", rentCost: 2500, heatReduction: 0.04, repReq: 0 },
-    { id: "rent3", name: "Downtown Loft", rentCost: 5000, heatReduction: 0.06, repReq: 100 },
-    { id: "rent4", name: "Luxury High-Rise", rentCost: 9000, heatReduction: 0.08, repReq: 400 },
-    { id: "rent5", name: "Sky Loft Penthouse", rentCost: 15000, heatReduction: 0.1, repReq: 1000 },
+    { id: "rent1", name: "Studio Apartment", rentCost: 1660, heatReduction: 0.02, repReq: 0 },
+    { id: "rent2", name: "1BR Apartment", rentCost: 3075, heatReduction: 0.04, repReq: 0 },
+    { id: "rent3", name: "Downtown Loft", rentCost: 6150, heatReduction: 0.06, repReq: 100 },
+    { id: "rent4", name: "Luxury High-Rise", rentCost: 11070, heatReduction: 0.08, repReq: 400 },
+    { id: "rent5", name: "Sky Loft Penthouse", rentCost: 18450, heatReduction: 0.1, repReq: 1000 },
   ],
   buy: [
-    { id: "buy1", name: "Suburban House", cost: 500000, taxCost: 550, heatReduction: 0.06, repReq: 0 },
-    { id: "buy5", name: "Luxury Condo", cost: 1350000, taxCost: 1350, heatReduction: 0.08, repReq: 100 },
-    { id: "buy2", name: "Penthouse Condo", cost: 2800000, taxCost: 2800, heatReduction: 0.1, repReq: 400 },
-    { id: "buy6", name: "Beachfront Villa", cost: 6700000, taxCost: 5600, heatReduction: 0.12, repReq: 1000 },
-    { id: "buy13", name: "Cliffside Glass Retreat", cost: 10000000, taxCost: 7500, heatReduction: 0.14, repReq: 1000 },
-    { id: "buy3", name: "Private Estate", cost: 13500000, taxCost: 9000, heatReduction: 0.15, repReq: 1000 },
-    { id: "buy10", name: "Modern Glass Estate", cost: 18000000, taxCost: 11000, heatReduction: 0.165, repReq: 1400 },
-    { id: "buy12", name: "Alpine Ski Estate", cost: 22000000, taxCost: 13000, heatReduction: 0.17, repReq: 1600 },
-    { id: "buy7", name: "Mega Mansion", cost: 28000000, taxCost: 17000, heatReduction: 0.18, repReq: 1800 },
-    { id: "buy11", name: "Hollywood Hills Estate", cost: 32000000, taxCost: 18500, heatReduction: 0.185, repReq: 1800 },
-    { id: "buy9", name: "Royal Estate", cost: 39000000, taxCost: 20000, heatReduction: 0.19, repReq: 1800 },
-    { id: "buy4", name: "Private Island Compound", cost: 50000000, taxCost: 22000, heatReduction: 0.2, repReq: 1000 },
-    { id: "buy8", name: "Sky Penthouse", cost: 90000000, taxCost: 34000, heatReduction: 0.22, repReq: 2500 },
+    { id: "buy1", name: "Suburban House", cost: 500000, taxCost: 676, heatReduction: 0.06, repReq: 0 },
+    { id: "buy5", name: "Luxury Condo", cost: 1350000, taxCost: 1660, heatReduction: 0.08, repReq: 100 },
+    { id: "buy2", name: "Penthouse Condo", cost: 2800000, taxCost: 3444, heatReduction: 0.1, repReq: 400 },
+    { id: "buy6", name: "Beachfront Villa", cost: 6700000, taxCost: 6888, heatReduction: 0.12, repReq: 1000 },
+    { id: "buy13", name: "Cliffside Glass Retreat", cost: 10000000, taxCost: 9225, heatReduction: 0.14, repReq: 1000 },
+    { id: "buy3", name: "Private Estate", cost: 13500000, taxCost: 11070, heatReduction: 0.15, repReq: 1000 },
+    { id: "buy10", name: "Modern Glass Estate", cost: 18000000, taxCost: 13530, heatReduction: 0.165, repReq: 1400 },
+    { id: "buy12", name: "Alpine Ski Estate", cost: 22000000, taxCost: 15990, heatReduction: 0.17, repReq: 1600 },
+    { id: "buy7", name: "Mega Mansion", cost: 28000000, taxCost: 20910, heatReduction: 0.18, repReq: 1800 },
+    { id: "buy11", name: "Hollywood Hills Estate", cost: 32000000, taxCost: 22755, heatReduction: 0.185, repReq: 1800 },
+    { id: "buy9", name: "Royal Estate", cost: 39000000, taxCost: 24600, heatReduction: 0.19, repReq: 1800 },
+    { id: "buy4", name: "Private Island Compound", cost: 50000000, taxCost: 27060, heatReduction: 0.2, repReq: 1000 },
+    { id: "buy8", name: "Sky Penthouse", cost: 90000000, taxCost: 41820, heatReduction: 0.22, repReq: 2500 },
   ],
 };
 
@@ -420,7 +417,7 @@ function currentSportsBoard() {
     return games;
   }
 
-  return [...drawMatchups(NBA_TEAMS, 3, "nba"), ...drawMatchups(UFC_FIGHTERS, 2, "ufc")];
+  return [...drawMatchups(NBA_TEAMS, 3, "nba"), ...drawMatchups(UFC_FIGHTERS, 4, "ufc")];
 }
 
 // Casino: High-Low card climb — guess higher or lower than the shown card, each
@@ -434,7 +431,7 @@ const BUSINESS_CYCLE_SECONDS = 60;
 // of just buying once and forgetting about it.
 const BUSINESS_CONDITION_DECAY = 5; // % lost per cycle
 const BUSINESS_CONDITION_MIN_INCOME_MULT = 0.3; // income floor at 0% condition
-const BUSINESS_MAINTAIN_COST_PCT = 0.05; // upkeep cost as a fraction of the business's purchase cost
+const BUSINESS_MAINTAIN_COST_PCT = 0.0675; // upkeep cost as a fraction of the business's purchase cost (0.05 + 35%)
 
 // Working a shift is a hands-on way to squeeze extra cash out of an owned business
 // beyond the passive payout cycle, gated by a cooldown so it's a bonus, not a grind.
@@ -444,6 +441,8 @@ const BUSINESS_SHIFT_MAX_MULT = 3;
 
 // Throwing a party at your place — costs cash up front, pays back in rep and a
 // randomized cash haul from guests, at the price of some heat from the noise.
+// Capped per rolling 24h window so it can't be spammed for easy rep/cash.
+const HOUSE_EVENTS_MAX_PER_DAY = 2;
 const HOUSE_EVENTS = [
   { id: "ev1", name: "Small Get-Together", desc: "Invite a few close contacts over.", cost: 2000, repGain: 15, cashRange: [500, 1500], heatGain: 3 },
   { id: "ev2", name: "House Party", desc: "Open the doors, let word spread.", cost: 12000, repGain: 60, cashRange: [3000, 9000], heatGain: 10 },
@@ -607,11 +606,12 @@ const GUN_COUNTER_OPTIONS = [
 
 // Watch dealing: buy stock from a supplier, sell to buyers who text in — same loop as drugs/guns.
 const WATCH_SUPPLIER_CATALOG = [
-  { id: "watchcheap", name: "Knockoff Watch", buyPrice: 80, sellPrice: 140, heat: 1 },
-  { id: "watchsteel", name: "Steel Chronograph", buyPrice: 300, sellPrice: 520, heat: 1 },
-  { id: "watchgold", name: "Gold Diver", buyPrice: 900, sellPrice: 1600, heat: 2 },
-  { id: "watchdiamond", name: "Diamond Bezel", buyPrice: 2500, sellPrice: 4400, heat: 2 },
-  { id: "watchiced", name: "Iced-Out Piece", buyPrice: 6000, sellPrice: 10500, heat: 3 },
+  // sellPrice is +50% over the original launch pricing
+  { id: "watchcheap", name: "Knockoff Watch", buyPrice: 80, sellPrice: 210, heat: 1 },
+  { id: "watchsteel", name: "Steel Chronograph", buyPrice: 300, sellPrice: 780, heat: 1 },
+  { id: "watchgold", name: "Gold Diver", buyPrice: 900, sellPrice: 2400, heat: 2 },
+  { id: "watchdiamond", name: "Diamond Bezel", buyPrice: 2500, sellPrice: 6600, heat: 2 },
+  { id: "watchiced", name: "Iced-Out Piece", buyPrice: 6000, sellPrice: 15750, heat: 3 },
 ];
 const WATCH_ORDER_QTY_RANGE = {
   watchcheap: [1, 4],
