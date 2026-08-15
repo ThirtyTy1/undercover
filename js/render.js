@@ -1,6 +1,7 @@
 // All DOM rendering lives here
 
 let activeTab = "contracts";
+let isPeriodicRender = false; // set true only around the 1s game-loop's render() call, in app.js
 
 document.addEventListener("click", (e) => {
   const tabBtn = e.target.closest(".tab-btn");
@@ -79,9 +80,11 @@ function renderTabContent() {
   // input out and recreates it, and refocusing a freshly-created element makes
   // mobile keyboards flicker/reset (losing whatever layout — numbers, letters —
   // the player had switched to). While a text field in here is focused, skip
-  // this tick's render entirely instead of trying to patch around it.
+  // just the passive tick's render — but never skip an explicit render the
+  // player triggered themselves (switching tabs, sub-views, etc.), or the UI
+  // would stop responding to their own clicks.
   const active = document.activeElement;
-  if (active && el.contains(active) && (active.tagName === "TEXTAREA" || (active.tagName === "INPUT" && active.type === "text"))) {
+  if (isPeriodicRender && active && el.contains(active) && (active.tagName === "TEXTAREA" || (active.tagName === "INPUT" && active.type === "text"))) {
     return;
   }
 
@@ -311,11 +314,13 @@ function bankTabHTML() {
         <button class="btn sell" data-action="withdraw-bank" data-amount="10000">Withdraw ${fmt(10000)}</button>
       </div>
       <div class="atm-custom">
-        <input type="text" id="bank-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 1.5M" />
+        <input type="text" inputmode="decimal" id="bank-custom-amount" class="atm-input" placeholder="Amount" />
+        <button class="btn suffix-btn" data-action="amount-suffix" data-target="bank-custom-amount" data-suffix="K">K</button>
+        <button class="btn suffix-btn" data-action="amount-suffix" data-target="bank-custom-amount" data-suffix="M">M</button>
         <button class="btn" data-action="deposit-bank-custom">Deposit</button>
         <button class="btn sell" data-action="withdraw-bank-custom">Withdraw</button>
       </div>
-      <div class="hint">ATM withdrawals take a ${Math.round(ATM_FEE_RATE * 100)}% fee.</div>
+      <div class="hint">ATM withdrawals take a ${Math.round(ATM_FEE_RATE * 100)}% fee. Type a number, then tap K or M for shorthand.</div>
     </div>`;
 }
 
@@ -405,7 +410,9 @@ function sportsbookHTML() {
       <button class="btn" data-action="sports-bet" data-amount="10000" ${!selLabel || state.cash < 10000 ? "disabled" : ""}>Bet ${fmt(10000)}</button>
     </div>
     <div class="atm-custom">
-      <input type="text" id="sports-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 100K" />
+      <input type="text" inputmode="decimal" id="sports-custom-amount" class="atm-input" placeholder="Amount" />
+      <button class="btn suffix-btn" data-action="amount-suffix" data-target="sports-custom-amount" data-suffix="K">K</button>
+      <button class="btn suffix-btn" data-action="amount-suffix" data-target="sports-custom-amount" data-suffix="M">M</button>
       <button class="btn" data-action="sports-bet-custom" ${!selLabel ? "disabled" : ""}>Bet</button>
     </div>`;
 }
@@ -1124,6 +1131,14 @@ function bindTabEvents() {
         const input = document.getElementById("bank-custom-amount");
         withdrawBank(parseAmountInput(input.value));
         input.value = "";
+      }
+      else if (action === "amount-suffix") {
+        const target = document.getElementById(btn.dataset.target);
+        if (target) {
+          const digits = target.value.replace(/[a-zA-Z]/g, "");
+          target.value = digits + btn.dataset.suffix;
+          target.focus();
+        }
       }
       else if (action === "flex-view") {
         flexView = btn.dataset.view;

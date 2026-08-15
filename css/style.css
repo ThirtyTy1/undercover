@@ -1182,8 +1182,8 @@ body {
 }
 
 .atm-custom {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: stretch;
 }
@@ -1195,8 +1195,10 @@ body {
   font-size: 0.9rem;
   padding: 0 12px;
   min-width: 0;
+  flex: 1 1 140px;
 }
 .atm-input:focus { outline: 1px solid var(--neon-teal); }
+.suffix-btn { flex: 0 0 auto; min-width: 44px; padding-left: 0; padding-right: 0; }
 
 /* ---------- Burner phone widget ---------- */
 

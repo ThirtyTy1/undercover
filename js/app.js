@@ -1689,7 +1689,9 @@ function gameTick() {
   }
 
   save();
+  isPeriodicRender = true;
   render();
+  isPeriodicRender = false;
 }
 
 // ---------- Boot ----------
