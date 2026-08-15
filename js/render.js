@@ -228,10 +228,13 @@ function arsenalTabHTML() {
 }
 
 function flexCategoryHTML(catName, items) {
+  const catKey = catName.toLowerCase();
+  const wireEligibleCategory = catKey === "cars" || catKey === "jets";
   const cards = items
     .map((item) => {
       const owned = state.ownedFlex.includes(item.id);
-      const price = flexPrice(item, catName.toLowerCase());
+      const price = flexPrice(item, catKey);
+      const canWire = wireEligibleCategory && price >= WIRE_MIN_COST;
       const effects = [];
       if (item.heatReduction) effects.push(`-${Math.round(item.heatReduction * 100)}% heat gain`);
       if (item.payoutBoost) effects.push(`+${Math.round(item.payoutBoost * 100)}% payout`);
@@ -245,7 +248,12 @@ function flexCategoryHTML(catName, items) {
             owned
               ? `<button class="btn equipped" disabled>Owned</button>
                  <button class="btn sell" data-action="sell-flex" data-id="${item.id}">Sell — ${fmt(Math.round(item.cost * SELL_RATE))}</button>`
-              : `<button class="btn" data-action="buy-flex" data-id="${item.id}" ${state.cash < price ? "disabled" : ""}>Buy — ${fmt(price)}</button>`
+              : `<button class="btn" data-action="buy-flex" data-id="${item.id}" ${state.cash < price ? "disabled" : ""}>Buy — ${fmt(price)}</button>
+                 ${
+                   canWire
+                     ? `<button class="btn launder" data-action="buy-flex" data-id="${item.id}" data-method="wire" ${state.bankBalance < price ? "disabled" : ""}>Wire from Bank — ${fmt(price)}</button>`
+                     : ""
+                 }`
           }
         </div>`;
     })
@@ -296,7 +304,7 @@ function bankTabHTML() {
         <button class="btn sell" data-action="withdraw-bank" data-amount="10000">Withdraw ${fmt(10000)}</button>
       </div>
       <div class="atm-custom">
-        <input type="number" id="bank-custom-amount" class="atm-input" placeholder="Custom amount" min="1" />
+        <input type="text" inputmode="decimal" id="bank-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 1.5M" />
         <button class="btn" data-action="deposit-bank-custom">Deposit</button>
         <button class="btn sell" data-action="withdraw-bank-custom">Withdraw</button>
       </div>
@@ -390,7 +398,7 @@ function sportsbookHTML() {
       <button class="btn" data-action="sports-bet" data-amount="10000" ${!selLabel || state.cash < 10000 ? "disabled" : ""}>Bet ${fmt(10000)}</button>
     </div>
     <div class="atm-custom">
-      <input type="number" id="sports-custom-amount" class="atm-input" placeholder="Custom amount" min="1" />
+      <input type="text" inputmode="decimal" id="sports-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 100K" />
       <button class="btn" data-action="sports-bet-custom" ${!selLabel ? "disabled" : ""}>Bet</button>
     </div>`;
 }
@@ -654,7 +662,12 @@ function housingTabHTML() {
               ? `<div class="locked-tag">Requires ${h.repReq} rep</div>`
               : full
               ? `<div class="locked-tag">Sell your house to buy another</div>`
-              : `<button class="btn" data-action="buy-house" data-id="${h.id}" ${state.cash < housePrice(h) ? "disabled" : ""}>Buy — ${fmt(housePrice(h))}</button>`
+              : `<button class="btn" data-action="buy-house" data-id="${h.id}" ${state.cash < housePrice(h) ? "disabled" : ""}>Buy — ${fmt(housePrice(h))}</button>
+                 ${
+                   housePrice(h) >= WIRE_MIN_COST
+                     ? `<button class="btn launder" data-action="buy-house" data-id="${h.id}" data-method="wire" ${state.bankBalance < housePrice(h) ? "disabled" : ""}>Wire from Bank — ${fmt(housePrice(h))}</button>`
+                     : ""
+                 }`
           }
         </div>`;
     })
@@ -1064,7 +1077,7 @@ function bindTabEvents() {
       else if (action === "buy-weapon") buyWeapon(id);
       else if (action === "equip-weapon") equipWeapon(id);
       else if (action === "sell-weapon") sellWeapon(id);
-      else if (action === "buy-flex") buyFlex(id);
+      else if (action === "buy-flex") buyFlex(id, btn.dataset.method);
       else if (action === "sell-flex") sellFlex(id);
       else if (action === "lay-low") doLayLow(id);
       else if (action === "hire-agent") hireAgent(id);
@@ -1091,18 +1104,18 @@ function bindTabEvents() {
       else if (action === "pay-car-bill") payCarBillEarly(id);
       else if (action === "pay-agent-salary") payAgentSalaryEarly(id);
       else if (action === "rent-house") rentHouse(id);
-      else if (action === "buy-house") buyHouse(id);
+      else if (action === "buy-house") buyHouse(id, btn.dataset.method);
       else if (action === "sell-house") sellHouse(id);
       else if (action === "move-out") moveOut(id);
       else if (action === "deposit-bank") depositBank(Number(btn.dataset.amount));
       else if (action === "withdraw-bank") withdrawBank(Number(btn.dataset.amount));
       else if (action === "deposit-bank-custom") {
         const input = document.getElementById("bank-custom-amount");
-        depositBank(Number(input.value));
+        depositBank(parseAmountInput(input.value));
         input.value = "";
       } else if (action === "withdraw-bank-custom") {
         const input = document.getElementById("bank-custom-amount");
-        withdrawBank(Number(input.value));
+        withdrawBank(parseAmountInput(input.value));
         input.value = "";
       }
       else if (action === "flex-view") {
@@ -1130,7 +1143,7 @@ function bindTabEvents() {
       else if (action === "sports-bet") placeSportsBet(Number(btn.dataset.amount));
       else if (action === "sports-bet-custom") {
         const input = document.getElementById("sports-custom-amount");
-        placeSportsBet(Number(input.value));
+        placeSportsBet(parseAmountInput(input.value));
         input.value = "";
       }
       else if (action === "sports-new") newSportsRound();

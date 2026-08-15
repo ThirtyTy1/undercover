@@ -120,6 +120,19 @@ function fmt(n) {
   return "$" + Math.round(n).toLocaleString();
 }
 
+// Parses shorthand amounts typed into custom-amount fields, e.g. "1.5M" -> 1500000,
+// "100k" -> 100000. Falls back to a plain number for anything else.
+function parseAmountInput(str) {
+  if (!str) return 0;
+  const s = String(str).trim().replace(/[,$]/g, "");
+  const match = s.match(/^(\d+(?:\.\d+)?)\s*([kKmMbB]?)$/);
+  if (!match) return Number(s) || 0;
+  const num = parseFloat(match[1]);
+  if (isNaN(num)) return 0;
+  const mult = { k: 1e3, m: 1e6, b: 1e9 }[match[2].toLowerCase()] || 1;
+  return Math.round(num * mult);
+}
+
 function currentTierIndex() {
   return tierForRep(state.rep);
 }
@@ -378,7 +391,7 @@ function flexPrice(item, categoryName) {
   return Math.round(item.cost * (1 - discount));
 }
 
-function buyFlex(id) {
+function buyFlex(id, payMethod) {
   let item = null;
   let categoryName = null;
   for (const [catName, cat] of Object.entries(FLEX_ITEMS)) {
@@ -390,11 +403,17 @@ function buyFlex(id) {
   }
   if (!item || state.ownedFlex.includes(id)) return;
   const cost = flexPrice(item, categoryName);
-  if (state.cash < cost) return;
-  state.cash -= cost;
+  const canWire = payMethod === "wire" && (categoryName === "cars" || categoryName === "jets") && cost >= WIRE_MIN_COST;
+  if (canWire) {
+    if (state.bankBalance < cost) return;
+    state.bankBalance -= cost;
+  } else {
+    if (state.cash < cost) return;
+    state.cash -= cost;
+  }
   state.ownedFlex.push(id);
   if (categoryName === "cars") state.carBills[id] = Date.now() + BILL_CYCLE_SECONDS * 1000;
-  addLog(`Bought ${item.name}`, "buy");
+  addLog(`Bought ${item.name}${canWire ? " — wired from bank" : ""}`, "buy");
   save();
   render();
 }
@@ -471,15 +490,21 @@ function housePrice(h) {
   return Math.round(h.cost * (1 - businessPerk("houseDiscount")));
 }
 
-function buyHouse(id) {
+function buyHouse(id, payMethod) {
   const h = HOUSES.buy.find((h) => h.id === id);
   if (!h || state.rep < h.repReq) return;
   if (ownedResidence()) return;
   const cost = housePrice(h);
-  if (state.cash < cost) return;
-  state.cash -= cost;
+  const canWire = payMethod === "wire" && cost >= WIRE_MIN_COST;
+  if (canWire) {
+    if (state.bankBalance < cost) return;
+    state.bankBalance -= cost;
+  } else {
+    if (state.cash < cost) return;
+    state.cash -= cost;
+  }
   state.residences.push({ type: "own", id, nextBillAt: Date.now() + BILL_CYCLE_SECONDS * 1000 });
-  addLog(`Bought ${h.name} for ${fmt(cost)}`, "buy");
+  addLog(`Bought ${h.name} for ${fmt(cost)}${canWire ? " — wired from bank" : ""}`, "buy");
   save();
   render();
 }

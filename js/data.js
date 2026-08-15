@@ -269,6 +269,7 @@ const FLEX_ITEMS = {
 };
 
 const SELL_RATE = 0.5; // fraction of original cost refunded when selling
+const WIRE_MIN_COST = 1600000; // cars, jets, and houses at or above this price can be paid via a bank wire instead of cash
 const BILL_CYCLE_SECONDS = 86400; // how often rent/property tax/insurance/salary comes due (24h) — can also be paid early
 const MAX_RENTALS = 2; // apartments you can rent at once, on top of 1 owned house
 const BILL_CAR_INSURANCE_RATE = 0.018; // insurance due per cycle, as a fraction of the car's cost (0.015 + 23%, rounded)
