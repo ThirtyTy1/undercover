@@ -75,9 +75,16 @@ function renderStats() {
 function renderTabContent() {
   const el = document.getElementById("tab-content");
 
-  // The game loop re-renders every second, which would otherwise wipe out
-  // whatever the player is mid-typing into a field inside this tab.
+  // The game loop re-renders every second. Rebuilding the DOM tears the focused
+  // input out and recreates it, and refocusing a freshly-created element makes
+  // mobile keyboards flicker/reset (losing whatever layout — numbers, letters —
+  // the player had switched to). While a text field in here is focused, skip
+  // this tick's render entirely instead of trying to patch around it.
   const active = document.activeElement;
+  if (active && el.contains(active) && (active.tagName === "TEXTAREA" || (active.tagName === "INPUT" && active.type === "text"))) {
+    return;
+  }
+
   const preserve =
     active && el.contains(active) && active.id
       ? { id: active.id, value: active.value, selStart: active.selectionStart, selEnd: active.selectionEnd }
@@ -304,7 +311,7 @@ function bankTabHTML() {
         <button class="btn sell" data-action="withdraw-bank" data-amount="10000">Withdraw ${fmt(10000)}</button>
       </div>
       <div class="atm-custom">
-        <input type="text" inputmode="text" autocomplete="off" autocapitalize="characters" id="bank-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 1.5M" />
+        <input type="text" id="bank-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 1.5M" />
         <button class="btn" data-action="deposit-bank-custom">Deposit</button>
         <button class="btn sell" data-action="withdraw-bank-custom">Withdraw</button>
       </div>
@@ -398,7 +405,7 @@ function sportsbookHTML() {
       <button class="btn" data-action="sports-bet" data-amount="10000" ${!selLabel || state.cash < 10000 ? "disabled" : ""}>Bet ${fmt(10000)}</button>
     </div>
     <div class="atm-custom">
-      <input type="text" inputmode="text" autocomplete="off" autocapitalize="characters" id="sports-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 100K" />
+      <input type="text" id="sports-custom-amount" class="atm-input" placeholder="Custom amount, e.g. 100K" />
       <button class="btn" data-action="sports-bet-custom" ${!selLabel ? "disabled" : ""}>Bet</button>
     </div>`;
 }
