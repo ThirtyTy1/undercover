@@ -45,75 +45,77 @@ const CITIES = [
 ];
 const TRAVEL_COST = 8000;
 
+const MAX_ACTIVE_CONTRACTS = 2; // contracts you can have running at once
+
 const CONTRACTS = [
   // Tier 0 - Street Hitter
-  { id: "c1", name: "Debt Collector", tier: 0, payout: 400, rep: 3, duration: 4, baseChance: 0.85, heat: 3,
+  { id: "c1", name: "Debt Collector", tier: 0, payout: 400, rep: 3, duration: 3, baseChance: 0.85, heat: 3,
     minigame: "charge", mgTitle: "Shake Them Down", mgFlavor: "Time your move for when they're about to crack." },
-  { id: "c2", name: "Rival Dealer", tier: 0, payout: 800, rep: 6, duration: 7, baseChance: 0.75, heat: 6,
+  { id: "c2", name: "Rival Dealer", tier: 0, payout: 800, rep: 6, duration: 4, baseChance: 0.75, heat: 6,
     minigame: "aim", mgTitle: "Ambush", mgFlavor: "Wait for your opening. Don't move too soon." },
-  { id: "c3", name: "Loudmouth Snitch", tier: 0, payout: 1500, rep: 9, duration: 10, baseChance: 0.65, heat: 9,
+  { id: "c3", name: "Loudmouth Snitch", tier: 0, payout: 1500, rep: 9, duration: 5, baseChance: 0.65, heat: 9,
     minigame: "rapidfire", mgTitle: "Silence Them", mgFlavor: "Shut down every witness before they talk." },
   // Tier 1 - Fixer
-  { id: "c4", name: "Crooked Cop", tier: 1, payout: 3500, rep: 20, duration: 15, baseChance: 0.6, heat: 14,
+  { id: "c4", name: "Crooked Cop", tier: 1, payout: 3500, rep: 20, duration: 8, baseChance: 0.6, heat: 14,
     minigame: "charge", mgTitle: "The Payoff", mgFlavor: "Slide the bribe at exactly the right moment." },
-  { id: "c5", name: "Business Rival", tier: 1, payout: 6000, rep: 28, duration: 20, baseChance: 0.55, heat: 18,
+  { id: "c5", name: "Business Rival", tier: 1, payout: 6000, rep: 28, duration: 10, baseChance: 0.55, heat: 18,
     minigame: "breach", mgTitle: "Crack the Safe", mgFlavor: "Match the combination before security notices." },
-  { id: "c6", name: "Gang Lieutenant", tier: 1, payout: 10000, rep: 40, duration: 28, baseChance: 0.5, heat: 22,
+  { id: "c6", name: "Gang Lieutenant", tier: 1, payout: 10000, rep: 40, duration: 14, baseChance: 0.5, heat: 22,
     minigame: "rapidfire", mgTitle: "Clear the Crew", mgFlavor: "Drop his men before they reach for their guns." },
   // Tier 2 - Ghost
-  { id: "c7", name: "Cartel Boss", tier: 2, payout: 25000, rep: 80, duration: 38, baseChance: 0.45, heat: 28,
+  { id: "c7", name: "Cartel Boss", tier: 2, payout: 25000, rep: 80, duration: 19, baseChance: 0.45, heat: 28,
     minigame: "drag", mgTitle: "Bypass Security", mgFlavor: "Mirror the compound's access code." },
-  { id: "c8", name: "Corrupt Judge", tier: 2, payout: 40000, rep: 107, duration: 45, baseChance: 0.4, heat: 32,
+  { id: "c8", name: "Corrupt Judge", tier: 2, payout: 40000, rep: 107, duration: 22, baseChance: 0.4, heat: 32,
     minigame: "drag", mgTitle: "The Drop", mgFlavor: "Hand off the evidence at the perfect moment." },
-  { id: "c9", name: "Federal Informant", tier: 2, payout: 65000, rep: 147, duration: 55, baseChance: 0.35, heat: 38,
+  { id: "c9", name: "Federal Informant", tier: 2, payout: 65000, rep: 147, duration: 28, baseChance: 0.35, heat: 38,
     minigame: "charge", mgTitle: "Cut the Line", mgFlavor: "Catch him before he dials for backup." },
   // Tier 3 - Legend
-  { id: "c10", name: "Crime Family Head", tier: 3, payout: 150000, rep: 333, duration: 75, baseChance: 0.35, heat: 45,
+  { id: "c10", name: "Crime Family Head", tier: 3, payout: 150000, rep: 333, duration: 38, baseChance: 0.35, heat: 45,
     minigame: "aim", mgTitle: "One Shot", mgFlavor: "You won't get a second chance. Time it perfectly." },
-  { id: "c11", name: "Foreign Diplomat", tier: 3, payout: 300000, rep: 500, duration: 90, baseChance: 0.3, heat: 50,
+  { id: "c11", name: "Foreign Diplomat", tier: 3, payout: 300000, rep: 500, duration: 45, baseChance: 0.3, heat: 50,
     minigame: "breach", mgTitle: "Vault Access", mgFlavor: "Replicate the embassy's security sequence." },
-  { id: "c12", name: "The Kingpin", tier: 3, unlockRep: 1350, payout: 600000, rep: 800, duration: 120, baseChance: 0.28, heat: 55,
+  { id: "c12", name: "The Kingpin", tier: 3, unlockRep: 1350, payout: 600000, rep: 800, duration: 60, baseChance: 0.28, heat: 55,
     minigame: "rapidfire", mgTitle: "Final Stand", mgFlavor: "Drop every last guard between you and him." },
   // Tier 4 - Kingmaker
-  { id: "c13", name: "Silence the Board", tier: 4, unlockRep: 2150, payout: 800000, rep: 950, duration: 100, baseChance: 0.25, heat: 60,
+  { id: "c13", name: "Silence the Board", tier: 4, unlockRep: 2150, payout: 800000, rep: 950, duration: 50, baseChance: 0.25, heat: 60,
     minigame: "breach", mgTitle: "Corporate Coup", mgFlavor: "Erase every trace before the board convenes." },
   // Tier 5 - Shadow Don
-  { id: "c14", name: "Take the Crown", tier: 5, unlockRep: 3200, payout: 1100000, rep: 1200, duration: 130, baseChance: 0.22, heat: 68,
+  { id: "c14", name: "Take the Crown", tier: 5, unlockRep: 3200, payout: 1100000, rep: 1200, duration: 65, baseChance: 0.22, heat: 68,
     minigame: "rapidfire", mgTitle: "Seize the Throne", mgFlavor: "Drop everyone standing between you and the top." },
   // Miami exclusive — requires flying in on a private jet
-  { id: "c15", name: "Yacht Party Hit", city: "miami", tier: 3, payout: 500000, rep: 700, duration: 90, baseChance: 0.3, heat: 50,
+  { id: "c15", name: "Yacht Party Hit", city: "miami", tier: 3, payout: 500000, rep: 700, duration: 45, baseChance: 0.3, heat: 50,
     minigame: "aim", mgTitle: "Deck Ambush", mgFlavor: "Catch him alone between the bar and the stern." },
-  { id: "c16", name: "Nightclub Kingpin", city: "miami", tier: 4, payout: 900000, rep: 1000, duration: 110, baseChance: 0.26, heat: 62,
+  { id: "c16", name: "Nightclub Kingpin", city: "miami", tier: 4, payout: 900000, rep: 1000, duration: 55, baseChance: 0.26, heat: 62,
     minigame: "breach", mgTitle: "VIP Access", mgFlavor: "Match the doorman's code before the set ends." },
-  { id: "c17", name: "Cartel Meeting", city: "miami", tier: 5, payout: 1300000, rep: 1300, duration: 140, baseChance: 0.2, heat: 72,
+  { id: "c17", name: "Cartel Meeting", city: "miami", tier: 5, payout: 1300000, rep: 1300, duration: 70, baseChance: 0.2, heat: 72,
     minigame: "rapidfire", mgTitle: "The Sit-Down", mgFlavor: "Every man at the table is armed. Move first." },
   // Tokyo exclusive — requires flying in on a private jet
-  { id: "c18", name: "Shibuya Shakedown", city: "tokyo", tier: 3, payout: 550000, rep: 720, duration: 95, baseChance: 0.29, heat: 52,
+  { id: "c18", name: "Shibuya Shakedown", city: "tokyo", tier: 3, payout: 550000, rep: 720, duration: 48, baseChance: 0.29, heat: 52,
     minigame: "drag", mgTitle: "Crossing Handoff", mgFlavor: "Slip the package across at the exact light change." },
-  { id: "c19", name: "Yakuza Lieutenant", city: "tokyo", tier: 4, payout: 950000, rep: 1050, duration: 115, baseChance: 0.25, heat: 64,
+  { id: "c19", name: "Yakuza Lieutenant", city: "tokyo", tier: 4, payout: 950000, rep: 1050, duration: 58, baseChance: 0.25, heat: 64,
     minigame: "charge", mgTitle: "Back Room", mgFlavor: "He only turns his back once. Take it." },
-  { id: "c20", name: "Underground Auction", city: "tokyo", tier: 5, payout: 1400000, rep: 1350, duration: 145, baseChance: 0.19, heat: 74,
+  { id: "c20", name: "Underground Auction", city: "tokyo", tier: 5, payout: 1400000, rep: 1350, duration: 72, baseChance: 0.19, heat: 74,
     minigame: "drag", mgTitle: "Bidder's Vault", mgFlavor: "Crack the lot case before the gavel falls." },
   // Los Angeles exclusive — requires flying in on a private jet
-  { id: "c21", name: "Studio Fixer", city: "losangeles", tier: 3, payout: 520000, rep: 710, duration: 92, baseChance: 0.29, heat: 51,
+  { id: "c21", name: "Studio Fixer", city: "losangeles", tier: 3, payout: 520000, rep: 710, duration: 46, baseChance: 0.29, heat: 51,
     minigame: "charge", mgTitle: "Damage Control", mgFlavor: "Get to him before the story breaks." },
-  { id: "c22", name: "Gang Territory Boss", city: "losangeles", tier: 4, payout: 920000, rep: 1020, duration: 112, baseChance: 0.25, heat: 63,
+  { id: "c22", name: "Gang Territory Boss", city: "losangeles", tier: 4, payout: 920000, rep: 1020, duration: 56, baseChance: 0.25, heat: 63,
     minigame: "rapidfire", mgTitle: "Block Party", mgFlavor: "His whole block is watching. Move fast." },
-  { id: "c23", name: "Award Show Hit", city: "losangeles", tier: 5, payout: 1320000, rep: 1310, duration: 142, baseChance: 0.2, heat: 73,
+  { id: "c23", name: "Award Show Hit", city: "losangeles", tier: 5, payout: 1320000, rep: 1310, duration: 71, baseChance: 0.2, heat: 73,
     minigame: "aim", mgTitle: "Red Carpet", mgFlavor: "One shot, in front of every camera in town." },
   // New York exclusive — requires flying in on a private jet
-  { id: "c24", name: "Wall Street Ghost", city: "newyork", tier: 3, payout: 540000, rep: 715, duration: 93, baseChance: 0.29, heat: 51,
+  { id: "c24", name: "Wall Street Ghost", city: "newyork", tier: 3, payout: 540000, rep: 715, duration: 46, baseChance: 0.29, heat: 51,
     minigame: "breach", mgTitle: "Trading Floor", mgFlavor: "Crack his terminal before the closing bell." },
-  { id: "c25", name: "Family Underboss", city: "newyork", tier: 4, payout: 940000, rep: 1030, duration: 113, baseChance: 0.25, heat: 63,
+  { id: "c25", name: "Family Underboss", city: "newyork", tier: 4, payout: 940000, rep: 1030, duration: 56, baseChance: 0.25, heat: 63,
     minigame: "charge", mgTitle: "Sit-Down", mgFlavor: "Old-school rules. One clean move." },
-  { id: "c26", name: "The Commission", city: "newyork", tier: 5, payout: 1350000, rep: 1320, duration: 143, baseChance: 0.2, heat: 73,
+  { id: "c26", name: "The Commission", city: "newyork", tier: 5, payout: 1350000, rep: 1320, duration: 72, baseChance: 0.2, heat: 73,
     minigame: "rapidfire", mgTitle: "Five Families", mgFlavor: "Every boss in the room has a gun under the table." },
   // Las Vegas exclusive — requires flying in on a private jet
-  { id: "c27", name: "Casino Skimmer", city: "vegas", tier: 3, payout: 530000, rep: 712, duration: 92, baseChance: 0.29, heat: 51,
+  { id: "c27", name: "Casino Skimmer", city: "vegas", tier: 3, payout: 530000, rep: 712, duration: 46, baseChance: 0.29, heat: 51,
     minigame: "drag", mgTitle: "The Count Room", mgFlavor: "Match the vault sequence before the eye in the sky notices." },
-  { id: "c28", name: "Pit Boss", city: "vegas", tier: 4, payout: 930000, rep: 1025, duration: 112, baseChance: 0.25, heat: 63,
+  { id: "c28", name: "Pit Boss", city: "vegas", tier: 4, payout: 930000, rep: 1025, duration: 56, baseChance: 0.25, heat: 63,
     minigame: "aim", mgTitle: "High Roller Suite", mgFlavor: "Catch him alone between hands." },
-  { id: "c29", name: "The House Always Wins", city: "vegas", tier: 5, payout: 1330000, rep: 1315, duration: 143, baseChance: 0.2, heat: 73,
+  { id: "c29", name: "The House Always Wins", city: "vegas", tier: 5, payout: 1330000, rep: 1315, duration: 72, baseChance: 0.2, heat: 73,
     minigame: "breach", mgTitle: "Eye in the Sky", mgFlavor: "Blind every camera before they blind you." },
 ];
 
@@ -125,17 +127,17 @@ const SPECIAL_ROTATION_HOURS = 6;
 const SPECIAL_ROTATION_MS = SPECIAL_ROTATION_HOURS * 60 * 60 * 1000;
 
 const SPECIAL_CONTRACTS = [
-  { id: "sp1", special: true, name: "The Informant's Tip", tier: 0, payout: 1400, rep: 10, duration: 6, baseChance: 0.7, heat: 5,
+  { id: "sp1", special: true, name: "The Informant's Tip", tier: 0, payout: 1400, rep: 10, duration: 3, baseChance: 0.7, heat: 5,
     minigame: "aim", mgTitle: "Burn the Source", mgFlavor: "He's about to talk. Get to him first." },
-  { id: "sp2", special: true, name: "High-Value Target", tier: 1, payout: 10000, rep: 45, duration: 22, baseChance: 0.5, heat: 20,
+  { id: "sp2", special: true, name: "High-Value Target", tier: 1, payout: 10000, rep: 45, duration: 11, baseChance: 0.5, heat: 20,
     minigame: "breach", mgTitle: "Breach the Safehouse", mgFlavor: "Every second past the code adds risk." },
-  { id: "sp3", special: true, name: "The Big Score", tier: 2, payout: 68000, rep: 150, duration: 48, baseChance: 0.38, heat: 34,
+  { id: "sp3", special: true, name: "The Big Score", tier: 2, payout: 68000, rep: 150, duration: 24, baseChance: 0.38, heat: 34,
     minigame: "drag", mgTitle: "The Exchange", mgFlavor: "One shot to make the handoff clean." },
-  { id: "sp4", special: true, name: "Federal Witness", tier: 3, payout: 380000, rep: 520, duration: 85, baseChance: 0.3, heat: 48,
+  { id: "sp4", special: true, name: "Federal Witness", tier: 3, payout: 380000, rep: 520, duration: 42, baseChance: 0.3, heat: 48,
     minigame: "aim", mgTitle: "Silence the Witness", mgFlavor: "The trial starts tomorrow. He doesn't make it." },
-  { id: "sp5", special: true, name: "Rival Family Boss", tier: 4, payout: 1000000, rep: 1000, duration: 105, baseChance: 0.24, heat: 58,
+  { id: "sp5", special: true, name: "Rival Family Boss", tier: 4, payout: 1000000, rep: 1000, duration: 52, baseChance: 0.24, heat: 58,
     minigame: "rapidfire", mgTitle: "Take the Compound", mgFlavor: "His whole crew is between you and him." },
-  { id: "sp6", special: true, name: "The Ghost Contract", tier: 5, payout: 1600000, rep: 1400, duration: 135, baseChance: 0.2, heat: 70,
+  { id: "sp6", special: true, name: "The Ghost Contract", tier: 5, payout: 1600000, rep: 1400, duration: 68, baseChance: 0.2, heat: 70,
     minigame: "breach", mgTitle: "No Trace Left", mgFlavor: "Whoever this is, they were never here." },
 ];
 
@@ -270,8 +272,10 @@ const FLEX_ITEMS = {
 };
 
 const SELL_RATE = 0.5; // fraction of original cost refunded when selling
-const BILL_CYCLE_SECONDS = 86400; // how often rent/property tax comes due (24h) — can also be paid early
+const BILL_CYCLE_SECONDS = 86400; // how often rent/property tax/insurance/salary comes due (24h) — can also be paid early
 const MAX_RENTALS = 2; // apartments you can rent at once, on top of 1 owned house
+const BILL_CAR_INSURANCE_RATE = 0.015; // insurance due per cycle, as a fraction of the car's cost
+const BILL_AGENT_SALARY_RATE = 0.05; // salary due per cycle, as a fraction of the agent's base hire cost — miss it and they quit
 
 const HOUSES = {
   rent: [
@@ -372,6 +376,50 @@ const ROULETTE_OUTSIDE_BETS = [
   { type: "dozen3", label: "3rd 12", mult: 3 },
 ];
 const ROULETTE_STRAIGHT_MULT = 36;
+
+// Casino: Sportsbook — NBA moneyline and UFC fight betting. The board rotates every
+// 30 real minutes, deterministically seeded from the time slot (same trick as the
+// contract rotation), so every player sees the same matchups and odds at once.
+const SPORTS_ROTATION_MINUTES = 30;
+const SPORTS_ROTATION_MS = SPORTS_ROTATION_MINUTES * 60 * 1000;
+const SPORTS_HOUSE_EDGE = 0.9; // payout multiplier scales fair odds down by this factor
+
+const NBA_TEAMS = [
+  "Lakers", "Celtics", "Warriors", "Bucks", "Nuggets", "Suns", "76ers", "Heat",
+  "Knicks", "Mavericks", "Grizzlies", "Clippers", "Nets", "Bulls",
+];
+const UFC_FIGHTERS = [
+  "Jon Jones", "Islam Makhachev", "Alex Pereira", "Leon Edwards", "Kamaru Usman",
+  "Israel Adesanya", "Charles Oliveira", "Justin Gaethje", "Sean O'Malley", "Max Holloway",
+];
+
+function sportsSlot() {
+  return Math.floor(Date.now() / SPORTS_ROTATION_MS);
+}
+function nextSportsRotationAt() {
+  return (sportsSlot() + 1) * SPORTS_ROTATION_MS;
+}
+function sportsMultiplier(prob) {
+  return Math.max(1.05, Math.round((SPORTS_HOUSE_EDGE / prob) * 100) / 100);
+}
+function currentSportsBoard() {
+  const slot = sportsSlot();
+  const rng = seededRng(slot * 104729 + 31);
+
+  function drawMatchups(pool, count, sport) {
+    const p = pool.slice();
+    const games = [];
+    for (let i = 0; i < count && p.length >= 2; i++) {
+      const teamA = p.splice(Math.floor(rng() * p.length), 1)[0];
+      const teamB = p.splice(Math.floor(rng() * p.length), 1)[0];
+      const probA = Math.round((0.25 + rng() * 0.5) * 100) / 100; // 25%-75% favorite spread
+      games.push({ id: `${sport}_${slot}_${i}`, sport, teamA, teamB, probA });
+    }
+    return games;
+  }
+
+  return [...drawMatchups(NBA_TEAMS, 3, "nba"), ...drawMatchups(UFC_FIGHTERS, 2, "ufc")];
+}
 
 // Casino: High-Low card climb — guess higher or lower than the shown card, each
 // correct guess grows the multiplier, cash out anytime or bust and lose it all.

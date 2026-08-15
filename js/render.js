@@ -90,6 +90,7 @@ function renderTabContent() {
   else if (activeTab === "casino") el.innerHTML = casinoTabHTML();
   else if (activeTab === "businesses") el.innerHTML = businessesTabHTML();
   else if (activeTab === "housing") el.innerHTML = housingTabHTML();
+  else if (activeTab === "bills") el.innerHTML = billsTabHTML();
   else if (activeTab === "world") el.innerHTML = worldTabHTML();
   else if (activeTab === "laylow") el.innerHTML = laylowTabHTML();
   else if (activeTab === "profile") el.innerHTML = profileTabHTML();
@@ -117,30 +118,35 @@ function contractsTabHTML() {
   if (burned) {
     const remain = Math.ceil((state.burnedUntil - Date.now()) / 1000);
     activeHTML = `<div class="active-contract burned">Lying low... back in ${remain}s</div>`;
-  } else if (state.activeContract && state.activeContract.ready) {
-    const c = findContractById(state.activeContract.contractId);
-    activeHTML = `
-      <div class="active-contract ready">
-        <div class="active-title">Job ready: ${c.name} — finish it to collect</div>
-        <button class="btn mg-action" data-action="play-contract">Play Contract</button>
-      </div>`;
-  } else if (state.activeContract) {
-    const c = findContractById(state.activeContract.contractId);
-    const elapsed = Date.now() - state.activeContract.startedAt;
-    const pct = Math.min(100, (elapsed / state.activeContract.duration) * 100);
-    const remain = Math.max(0, Math.ceil((state.activeContract.duration - elapsed) / 1000));
-    activeHTML = `
-      <div class="active-contract">
-        <div class="active-title">In progress: ${c.name} — ${remain}s left</div>
-        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-      </div>`;
+  } else if (state.activeContracts.length > 0) {
+    activeHTML = state.activeContracts.map((ac) => {
+      const c = findContractById(ac.contractId);
+      if (!c) return "";
+      if (ac.ready) {
+        return `
+          <div class="active-contract ready">
+            <div class="active-title">Job ready: ${c.name} — finish it to collect</div>
+            <button class="btn mg-action" data-action="play-contract" data-id="${ac.contractId}">Play Contract</button>
+          </div>`;
+      }
+      const elapsed = Date.now() - ac.startedAt;
+      const pct = Math.min(100, (elapsed / ac.duration) * 100);
+      const remain = Math.max(0, Math.ceil((ac.duration - elapsed) / 1000));
+      return `
+        <div class="active-contract">
+          <div class="active-title">In progress: ${c.name} — ${remain}s left</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    }).join("");
   }
 
+  const atCapacity = state.activeContracts.length >= MAX_ACTIVE_CONTRACTS;
   const special = currentSpecialContract();
   const specialCompleted = state.lastSpecialSlotCompleted === currentSpecialSlot();
   const specialRepReq = Math.max(TIERS[special.tier].repReq, special.unlockRep || 0);
   const specialLocked = special.tier > tierIdx || state.rep < specialRepReq;
-  const specialDisabled = specialLocked || specialCompleted || !!state.activeContract || burned;
+  const specialTaken = state.activeContracts.some((ac) => ac.contractId === special.id);
+  const specialDisabled = specialLocked || specialCompleted || specialTaken || atCapacity || burned;
   const specialChance = Math.round(
     Math.max(0.05, Math.min(0.97, special.baseChance + weaponBonus() - Math.min(state.heat / 250, 0.3))) * 100
   );
@@ -170,7 +176,8 @@ function contractsTabHTML() {
   const cards = cityContracts.map((c) => {
     const repReq = Math.max(TIERS[c.tier].repReq, c.unlockRep || 0);
     const locked = c.tier > tierIdx || state.rep < repReq;
-    const disabled = locked || !!state.activeContract || burned;
+    const taken = state.activeContracts.some((ac) => ac.contractId === c.id);
+    const disabled = locked || taken || atCapacity || burned;
     const chance = Math.round(
       Math.max(0.05, Math.min(0.97, c.baseChance + weaponBonus() - Math.min(state.heat / 250, 0.3))) * 100
     );
@@ -311,10 +318,72 @@ function casinoTabHTML() {
       <button class="btn ${casinoView === "slots" ? "equipped" : ""}" data-action="casino-view" data-view="slots">Slots</button>
       <button class="btn ${casinoView === "roulette" ? "equipped" : ""}" data-action="casino-view" data-view="roulette">Roulette</button>
       <button class="btn ${casinoView === "highlow" ? "equipped" : ""}" data-action="casino-view" data-view="highlow">High-Low</button>
+      <button class="btn ${casinoView === "sportsbook" ? "equipped" : ""}" data-action="casino-view" data-view="sportsbook">Sportsbook</button>
     </div>`;
   const body =
-    casinoView === "blackjack" ? blackjackHTML() : casinoView === "slots" ? slotsHTML() : casinoView === "highlow" ? highlowHTML() : rouletteHTML();
+    casinoView === "blackjack" ? blackjackHTML()
+    : casinoView === "slots" ? slotsHTML()
+    : casinoView === "highlow" ? highlowHTML()
+    : casinoView === "sportsbook" ? sportsbookHTML()
+    : rouletteHTML();
   return nav + body;
+}
+
+function sportsbookHTML() {
+  const board = currentSportsBoard();
+  const rotationRemain = Math.max(0, (nextSportsRotationAt() - Date.now()) / 1000);
+
+  if (sportsGame) {
+    const m = sportsGame.matchup;
+    const live = sportsGame.phase === "live";
+    const teamName = sportsGame.side === "A" ? m.teamA : m.teamB;
+    const resultCls = sportsGame.resultText ? (sportsGame.resultText.includes("won") ? "great" : "fail") : "";
+    const matchupLabel = m.sport === "ufc" ? `${m.teamA} vs ${m.teamB}` : `${m.teamA} vs ${m.teamB}`;
+    return `
+      <div class="casino-table">
+        <div class="cat-heading">${m.sport === "ufc" ? "🥊" : "🏀"} ${matchupLabel}</div>
+        <div class="card-row">Bet ${fmt(sportsGame.bet)} on ${teamName}</div>
+        ${live ? `<div class="hint">${m.sport === "ufc" ? "Fight" : "Game"} in progress...</div>` : ""}
+        ${sportsGame.resultText ? `<div class="mg-result-text ${resultCls}">${sportsGame.resultText}</div>` : ""}
+        ${!live ? `<button class="btn" data-action="sports-new">Back to Board</button>` : ""}
+      </div>`;
+  }
+
+  function matchupCard(m) {
+    const multA = sportsMultiplier(m.probA);
+    const multB = sportsMultiplier(1 - m.probA);
+    const selA = sportsSelection && sportsSelection.matchupId === m.id && sportsSelection.side === "A";
+    const selB = sportsSelection && sportsSelection.matchupId === m.id && sportsSelection.side === "B";
+    return `
+      <div class="card">
+        <div class="card-title">${m.teamA} vs ${m.teamB}</div>
+        <div class="crypto-action-group">
+          <button class="btn ${selA ? "equipped" : ""}" data-action="sports-select" data-id="${m.id}" data-side="A">${m.teamA} — ${multA.toFixed(2)}x</button>
+          <button class="btn ${selB ? "equipped" : ""}" data-action="sports-select" data-id="${m.id}" data-side="B">${m.teamB} — ${multB.toFixed(2)}x</button>
+        </div>
+      </div>`;
+  }
+
+  const nbaGames = board.filter((g) => g.sport === "nba");
+  const ufcFights = board.filter((g) => g.sport === "ufc");
+  const selMatch = sportsSelection ? board.find((g) => g.id === sportsSelection.matchupId) : null;
+  const selLabel = selMatch ? (sportsSelection.side === "A" ? selMatch.teamA : selMatch.teamB) : null;
+
+  return `
+    <div class="card-row">Board refreshes in ${formatDuration(rotationRemain)}.</div>
+    <h3 class="cat-heading">🏀 NBA</h3>
+    <div class="grid">${nbaGames.map(matchupCard).join("")}</div>
+    <h3 class="cat-heading">🥊 UFC</h3>
+    <div class="grid">${ufcFights.map(matchupCard).join("")}</div>
+    <div class="card-row">Bet: ${selLabel ? `${selLabel} to win` : "None selected — tap a team or fighter"} ${
+      selLabel ? `<button class="btn sell" data-action="sports-clear" style="margin-left:8px">Clear Bet</button>` : ""
+    }</div>
+    <div class="crypto-action-group">
+      <button class="btn" data-action="sports-bet" data-amount="100" ${!selLabel || state.cash < 100 ? "disabled" : ""}>Bet ${fmt(100)}</button>
+      <button class="btn" data-action="sports-bet" data-amount="500" ${!selLabel || state.cash < 500 ? "disabled" : ""}>Bet ${fmt(500)}</button>
+      <button class="btn" data-action="sports-bet" data-amount="2000" ${!selLabel || state.cash < 2000 ? "disabled" : ""}>Bet ${fmt(2000)}</button>
+      <button class="btn" data-action="sports-bet" data-amount="10000" ${!selLabel || state.cash < 10000 ? "disabled" : ""}>Bet ${fmt(10000)}</button>
+    </div>`;
 }
 
 function highlowHTML() {
@@ -598,6 +667,67 @@ function housingTabHTML() {
     ${eventsSection}
     <h3 class="cat-heading">Rentals (${rentalCount}/${MAX_RENTALS})</h3><div class="grid">${rentCards}</div>
     <h3 class="cat-heading">Own (${owned ? 1 : 0}/1)</h3><div class="grid">${buyCards}</div>`;
+}
+
+function billsTabHTML() {
+  const rentals = rentedResidences();
+  const owned = ownedResidence();
+  const allResidences = [...rentals, ...(owned ? [owned] : [])];
+
+  const houseRows = allResidences.map((residence) => {
+    const h = houseData(residence);
+    if (!h) return "";
+    const due = residence.type === "rent" ? h.rentCost : h.taxCost;
+    const label = residence.type === "rent" ? "Rent" : "Property Tax";
+    const remain = residence.nextBillAt ? Math.max(0, residence.nextBillAt - Date.now()) / 1000 : 0;
+    return `
+      <div class="card">
+        <div class="card-title">${h.name}</div>
+        <div class="card-row">${label} — due in ${formatDuration(remain)}</div>
+        <button class="btn" data-action="pay-bill-early" data-type="${residence.type}" data-id="${residence.id}" ${state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
+      </div>`;
+  }).join("");
+
+  const ownedCars = FLEX_ITEMS.cars.filter((c) => state.ownedFlex.includes(c.id));
+  const carRows = ownedCars.map((c) => {
+    const due = carInsuranceCost(c);
+    const nextAt = state.carBills[c.id];
+    const remain = nextAt ? Math.max(0, nextAt - Date.now()) / 1000 : 0;
+    return `
+      <div class="card">
+        <div class="card-title">${c.name}</div>
+        <div class="card-row">Insurance — due in ${formatDuration(remain)}</div>
+        <button class="btn" data-action="pay-car-bill" data-id="${c.id}" ${state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
+      </div>`;
+  }).join("");
+
+  const agentRows = state.hiredAgents.map((unit) => {
+    const type = AGENTS.find((a) => a.id === unit.typeId);
+    if (!type) return "";
+    const due = agentSalaryCost(type);
+    const remain = unit.nextBillAt ? Math.max(0, unit.nextBillAt - Date.now()) / 1000 : 0;
+    return `
+      <div class="card">
+        <div class="card-title">${type.name}</div>
+        <div class="card-row">Salary — due in ${formatDuration(remain)}</div>
+        <div class="card-row hint">Miss it and they quit.</div>
+        <button class="btn" data-action="pay-agent-salary" data-id="${unit.id}" ${state.cash < due ? "disabled" : ""}>Pay Now — ${fmt(due)}</button>
+      </div>`;
+  }).join("");
+
+  const totalDaily =
+    allResidences.reduce((s, r) => { const h = houseData(r); return s + (h ? (r.type === "rent" ? h.rentCost : h.taxCost) : 0); }, 0) +
+    ownedCars.reduce((s, c) => s + carInsuranceCost(c), 0) +
+    state.hiredAgents.reduce((s, u) => { const t = AGENTS.find((a) => a.id === u.typeId); return s + (t ? agentSalaryCost(t) : 0); }, 0);
+
+  return `
+    <div class="active-contract"><div class="active-title">Total bills: ${fmt(totalDaily)} / day</div></div>
+    <h3 class="cat-heading">Houses</h3>
+    <div class="grid">${houseRows || `<div class="card-row">No residence.</div>`}</div>
+    <h3 class="cat-heading">Cars</h3>
+    <div class="grid">${carRows || `<div class="card-row">No cars owned.</div>`}</div>
+    <h3 class="cat-heading">Workers</h3>
+    <div class="grid">${agentRows || `<div class="card-row">No agents hired.</div>`}</div>`;
 }
 
 function profileTabHTML() {
@@ -908,7 +1038,7 @@ function bindTabEvents() {
       const action = btn.dataset.action;
       const id = btn.dataset.id;
       if (action === "take-contract") takeContract(id);
-      else if (action === "play-contract") playContract();
+      else if (action === "play-contract") playContract(id);
       else if (action === "buy-weapon") buyWeapon(id);
       else if (action === "equip-weapon") equipWeapon(id);
       else if (action === "sell-weapon") sellWeapon(id);
@@ -936,6 +1066,8 @@ function bindTabEvents() {
         importSaveCode(input.value);
       }
       else if (action === "pay-bill-early") payBillEarly(btn.dataset.type, id);
+      else if (action === "pay-car-bill") payCarBillEarly(id);
+      else if (action === "pay-agent-salary") payAgentSalaryEarly(id);
       else if (action === "rent-house") rentHouse(id);
       else if (action === "buy-house") buyHouse(id);
       else if (action === "sell-house") sellHouse(id);
@@ -971,6 +1103,10 @@ function bindTabEvents() {
       else if (action === "highlow-guess") highlowGuess(btn.dataset.dir);
       else if (action === "highlow-cashout") highlowCashOut();
       else if (action === "highlow-new") highlowNewRound();
+      else if (action === "sports-select") selectSportsBet(id, btn.dataset.side);
+      else if (action === "sports-clear") clearSportsBet();
+      else if (action === "sports-bet") placeSportsBet(Number(btn.dataset.amount));
+      else if (action === "sports-new") newSportsRound();
     });
   });
 

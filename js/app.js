@@ -12,11 +12,12 @@ function freshState() {
     ownedWeapons: ["w1"],
     equippedWeapon: "w1",
     ownedFlex: [],
-    activeContract: null, // { contractId, startedAt, duration }
+    activeContracts: [], // [{ contractId, startedAt, duration, ready }] — up to MAX_ACTIVE_CONTRACTS at once
     burnedUntil: 0,
     log: [],
     tickCount: 0,
     residences: [], // [{ type: "rent" | "own", id, nextBillAt }] — up to MAX_RENTALS rentals + 1 owned
+    carBills: {}, // carId -> nextBillAt, for owned cars' insurance
     stats: { contractsCompleted: 0, contractsFailed: 0, timesBurned: 0, totalEarned: 0, drugSalesTotal: 0, gunSalesTotal: 0, watchSalesTotal: 0, businessIncomeTotal: 0 },
     netWorthHistory: [],
     phone: { threads: {}, nextJobBonus: 0 },
@@ -58,6 +59,11 @@ function load() {
       if (loaded.housingType && loaded.housingId && (!loaded.residences || loaded.residences.length === 0)) {
         state.residences = [{ type: loaded.housingType, id: loaded.housingId, nextBillAt: loaded.nextBillAt || Date.now() + BILL_CYCLE_SECONDS * 1000 }];
       }
+      // Migrate old single-slot activeContract saves into the activeContracts array.
+      if (loaded.activeContract && (!state.activeContracts || state.activeContracts.length === 0)) {
+        state.activeContracts = [loaded.activeContract];
+      }
+      delete state.activeContract;
       state.rep = Math.min(MAX_REP, state.rep);
       // Drop stale orders/stock referencing items removed from a catalog (e.g. Revolver).
       state.gunOrders = state.gunOrders.filter((o) => ARMS_CATALOG.some((g) => g.id === o.gunId));
@@ -73,6 +79,16 @@ function load() {
       // Existing owned businesses from before condition/upkeep existed start at full condition.
       for (const id of state.businesses) {
         if (typeof state.businessCondition[id] !== "number") state.businessCondition[id] = 100;
+      }
+      // Cars owned from before insurance billing existed start a fresh billing cycle now.
+      for (const id of state.ownedFlex) {
+        if (FLEX_ITEMS.cars.some((c) => c.id === id) && !state.carBills[id]) {
+          state.carBills[id] = Date.now() + BILL_CYCLE_SECONDS * 1000;
+        }
+      }
+      // Agents hired from before salary billing existed start a fresh billing cycle now.
+      for (const unit of state.hiredAgents) {
+        if (!unit.nextBillAt) unit.nextBillAt = Date.now() + BILL_CYCLE_SECONDS * 1000;
       }
     } catch (e) {
       console.warn("save corrupted, starting fresh");
@@ -183,7 +199,8 @@ function netWorth() {
 // ---------- Contracts ----------
 
 function takeContract(contractId) {
-  if (state.activeContract) return;
+  if (state.activeContracts.length >= MAX_ACTIVE_CONTRACTS) return;
+  if (state.activeContracts.some((ac) => ac.contractId === contractId)) return;
   if (Date.now() < state.burnedUntil) return;
   const c = findContractById(contractId);
   if (!c) return;
@@ -194,7 +211,7 @@ function takeContract(contractId) {
   if (c.special && state.lastSpecialSlotCompleted === currentSpecialSlot()) return;
   if (currentTierIndex() < c.tier) return;
   if (c.unlockRep && state.rep < c.unlockRep) return;
-  state.activeContract = { contractId, startedAt: Date.now(), duration: c.duration * 1000 };
+  state.activeContracts.push({ contractId, startedAt: Date.now(), duration: c.duration * 1000, ready: false });
   addLog(`Took contract: ${c.name}`, "info");
   save();
   render();
@@ -204,28 +221,32 @@ function findContractById(id) {
   return CONTRACTS.find((c) => c.id === id) || SPECIAL_CONTRACTS.find((c) => c.id === id);
 }
 
-function playContract() {
-  const ac = state.activeContract;
+let currentContractInPlay = null;
+
+function playContract(contractId) {
+  const ac = state.activeContracts.find((a) => a.contractId === contractId);
   if (!ac || !ac.ready) return;
   const c = findContractById(ac.contractId);
   if (!c) return;
+  currentContractInPlay = contractId;
   openMinigameModal(c, (performance) => {
     closeMinigameModal();
-    resolveContract(performance);
+    resolveContract(contractId, performance);
   });
 }
 
 function skipMinigame() {
   closeMinigameModal();
-  resolveContract(0.35);
+  if (currentContractInPlay) resolveContract(currentContractInPlay, 0.35);
 }
 
-function resolveContract(performance) {
-  const ac = state.activeContract;
+function resolveContract(contractId, performance) {
+  const ac = state.activeContracts.find((a) => a.contractId === contractId);
+  currentContractInPlay = null;
   if (!ac) return;
   const c = findContractById(ac.contractId);
   if (!c) {
-    state.activeContract = null;
+    state.activeContracts = state.activeContracts.filter((a) => a !== ac);
     return;
   }
   const heatPenalty = Math.min(state.heat / 250, 0.3); // high heat hurts odds
@@ -259,7 +280,7 @@ function resolveContract(performance) {
     addLog(`❌ ${c.name} blown. No payout, +${Math.round(heatGain * 1.5)} heat`, "fail");
   }
 
-  state.activeContract = null;
+  state.activeContracts = state.activeContracts.filter((a) => a !== ac);
 
   if (state.heat >= 100) {
     triggerBurned();
@@ -360,6 +381,7 @@ function buyFlex(id) {
   if (state.cash < cost) return;
   state.cash -= cost;
   state.ownedFlex.push(id);
+  if (categoryName === "cars") state.carBills[id] = Date.now() + BILL_CYCLE_SECONDS * 1000;
   addLog(`Bought ${item.name}`, "buy");
   save();
   render();
@@ -374,8 +396,44 @@ function sellFlex(id) {
   if (!item || !state.ownedFlex.includes(id)) return;
   const refund = Math.round(item.cost * SELL_RATE);
   state.ownedFlex = state.ownedFlex.filter((x) => x !== id);
+  delete state.carBills[id];
   state.cash += refund;
   addLog(`Sold ${item.name} for ${fmt(refund)}`, "sell");
+  save();
+  render();
+}
+
+function carInsuranceCost(car) {
+  return Math.round(car.cost * BILL_CAR_INSURANCE_RATE);
+}
+
+function payCarBill(carId) {
+  const item = FLEX_ITEMS.cars.find((c) => c.id === carId);
+  if (!item) {
+    delete state.carBills[carId];
+    return;
+  }
+  const due = carInsuranceCost(item);
+  if (state.cash >= due) {
+    state.cash -= due;
+    addLog(`Paid insurance: ${fmt(due)} — ${item.name}`, "bill");
+  } else {
+    state.heat = Math.min(100, state.heat + 8);
+    addLog(`Missed insurance on ${item.name} — +8 heat`, "fail");
+  }
+  state.carBills[carId] = Date.now() + BILL_CYCLE_SECONDS * 1000;
+}
+
+function processCarBills() {
+  for (const carId of Object.keys(state.carBills)) {
+    if (Date.now() < state.carBills[carId]) continue;
+    payCarBill(carId);
+  }
+}
+
+function payCarBillEarly(carId) {
+  if (!state.carBills[carId]) return;
+  payCarBill(carId);
   save();
   render();
 }
@@ -577,6 +635,7 @@ function hireAgent(typeId) {
     gunId: null,
     clothingId: null,
     carId: null,
+    nextBillAt: Date.now() + BILL_CYCLE_SECONDS * 1000,
   });
   if (!state.nextAgentPayoutAt) state.nextAgentPayoutAt = Date.now() + AGENT_CYCLE_SECONDS * 1000;
   addLog(`Hired a ${type.name} for ${fmt(cost)} — needs a gun, clothes, and a car before they can work`, "buy");
@@ -609,6 +668,42 @@ function equipAgentGear(instanceId, slot, gearId) {
   else unit.carId = gearId;
   const type = AGENTS.find((a) => a.id === unit.typeId);
   addLog(`Equipped ${item.name} on your ${type ? type.name : "agent"}`, "buy");
+  save();
+  render();
+}
+
+function agentSalaryCost(type) {
+  return Math.round(type.cost * BILL_AGENT_SALARY_RATE);
+}
+
+function payAgentSalary(unit) {
+  const type = AGENTS.find((a) => a.id === unit.typeId);
+  if (!type) {
+    state.hiredAgents = state.hiredAgents.filter((u) => u !== unit);
+    return;
+  }
+  const due = agentSalaryCost(type);
+  if (state.cash >= due) {
+    state.cash -= due;
+    addLog(`Paid salary: ${fmt(due)} — ${type.name}`, "bill");
+    unit.nextBillAt = Date.now() + BILL_CYCLE_SECONDS * 1000;
+  } else {
+    addLog(`Couldn't pay ${type.name}'s salary — they quit`, "fail");
+    state.hiredAgents = state.hiredAgents.filter((u) => u !== unit);
+  }
+}
+
+function processAgentSalaries() {
+  for (const unit of [...state.hiredAgents]) {
+    if (!unit.nextBillAt || Date.now() < unit.nextBillAt) continue;
+    payAgentSalary(unit);
+  }
+}
+
+function payAgentSalaryEarly(instanceId) {
+  const unit = state.hiredAgents.find((u) => u.id === instanceId);
+  if (!unit) return;
+  payAgentSalary(unit);
   save();
   render();
 }
@@ -1083,6 +1178,63 @@ function resolveRoulette(resultNumber, amount, betType, betNumber) {
   render();
 }
 
+// ---------- Sportsbook ----------
+
+let sportsGame = null; // { matchupId, side, bet, phase: 'live'|'done', resultText }
+let sportsSelection = null; // { matchupId, side }
+
+function clearSportsBet() {
+  if (sportsGame && sportsGame.phase === "live") return;
+  sportsSelection = null;
+  render();
+}
+
+function selectSportsBet(matchupId, side) {
+  if (sportsGame && sportsGame.phase === "live") return;
+  sportsSelection = { matchupId, side };
+  render();
+}
+
+function placeSportsBet(amount) {
+  if (!sportsSelection) return;
+  amount = Math.floor(Math.min(amount, state.cash));
+  if (amount <= 0 || (sportsGame && sportsGame.phase === "live")) return;
+  const board = currentSportsBoard();
+  const m = board.find((g) => g.id === sportsSelection.matchupId);
+  if (!m) return;
+  const side = sportsSelection.side;
+  state.cash -= amount;
+  sportsGame = { matchupId: m.id, side, bet: amount, matchup: m, phase: "live", resultText: null };
+  sportsSelection = null;
+  save();
+  render();
+
+  setTimeout(() => resolveSportsBet(m, side, amount), 1200);
+}
+
+function resolveSportsBet(m, side, amount) {
+  const prob = side === "A" ? m.probA : 1 - m.probA;
+  const mult = sportsMultiplier(prob);
+  const won = Math.random() < prob;
+  const teamName = side === "A" ? m.teamA : m.teamB;
+
+  const payout = won ? Math.round(amount * mult) : 0;
+  state.cash += payout;
+
+  sportsGame.phase = "done";
+  sportsGame.resultText = won ? `${teamName} won! +${fmt(payout - amount)}` : `${teamName} lost. -${fmt(amount)}`;
+
+  addLog(`Sportsbook: ${sportsGame.resultText}`, won ? "success" : "fail");
+  save();
+  render();
+}
+
+function newSportsRound() {
+  if (sportsGame && sportsGame.phase === "live") return;
+  sportsGame = null;
+  render();
+}
+
 // ---------- Save file transfer ----------
 
 function exportSave() {
@@ -1465,6 +1617,8 @@ function gameTick() {
   }
 
   processBilling();
+  processCarBills();
+  processAgentSalaries();
   processBankInterest();
   processAgentPayout();
   processBusinessPayout();
@@ -1472,11 +1626,10 @@ function gameTick() {
   processGunOrders();
   processWatchOrders();
 
-  // mark active contract ready once its timer completes (resolution now waits on the mini-game)
-  if (state.activeContract && !state.activeContract.ready) {
-    const elapsed = Date.now() - state.activeContract.startedAt;
-    if (elapsed >= state.activeContract.duration) {
-      state.activeContract.ready = true;
+  // mark active contracts ready once their timer completes (resolution now waits on the mini-game)
+  for (const ac of state.activeContracts) {
+    if (!ac.ready && Date.now() - ac.startedAt >= ac.duration) {
+      ac.ready = true;
     }
   }
 
