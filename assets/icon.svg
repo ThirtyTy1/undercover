@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#153826"/>
+      <stop offset="55%" stop-color="#0a1a10"/>
+      <stop offset="100%" stop-color="#050805"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="7" y="7" width="498" height="498" rx="106" fill="none" stroke="#00e676" stroke-opacity="0.4" stroke-width="6"/>
+
+  <g filter="url(#glow)" stroke="#00e676" stroke-width="24" fill="none" stroke-linecap="round">
+    <circle cx="256" cy="256" r="148"/>
+    <line x1="256" y1="46" x2="256" y2="122"/>
+    <line x1="256" y1="390" x2="256" y2="466"/>
+    <line x1="46" y1="256" x2="122" y2="256"/>
+    <line x1="390" y1="256" x2="466" y2="256"/>
+  </g>
+
+  <circle cx="256" cy="256" r="30" fill="#ff3b5c" filter="url(#glow)"/>
+</svg>
