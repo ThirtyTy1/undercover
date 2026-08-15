@@ -383,6 +383,10 @@ function sportsbookHTML() {
       <button class="btn" data-action="sports-bet" data-amount="500" ${!selLabel || state.cash < 500 ? "disabled" : ""}>Bet ${fmt(500)}</button>
       <button class="btn" data-action="sports-bet" data-amount="2000" ${!selLabel || state.cash < 2000 ? "disabled" : ""}>Bet ${fmt(2000)}</button>
       <button class="btn" data-action="sports-bet" data-amount="10000" ${!selLabel || state.cash < 10000 ? "disabled" : ""}>Bet ${fmt(10000)}</button>
+    </div>
+    <div class="atm-custom">
+      <input type="number" id="sports-custom-amount" class="atm-input" placeholder="Custom amount" min="1" />
+      <button class="btn" data-action="sports-bet-custom" ${!selLabel ? "disabled" : ""}>Bet</button>
     </div>`;
 }
 
@@ -1106,6 +1110,11 @@ function bindTabEvents() {
       else if (action === "sports-select") selectSportsBet(id, btn.dataset.side);
       else if (action === "sports-clear") clearSportsBet();
       else if (action === "sports-bet") placeSportsBet(Number(btn.dataset.amount));
+      else if (action === "sports-bet-custom") {
+        const input = document.getElementById("sports-custom-amount");
+        placeSportsBet(Number(input.value));
+        input.value = "";
+      }
       else if (action === "sports-new") newSportsRound();
     });
   });

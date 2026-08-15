@@ -378,9 +378,9 @@ const ROULETTE_OUTSIDE_BETS = [
 const ROULETTE_STRAIGHT_MULT = 36;
 
 // Casino: Sportsbook — NBA moneyline and UFC fight betting. The board rotates every
-// 30 real minutes, deterministically seeded from the time slot (same trick as the
+// few real minutes, deterministically seeded from the time slot (same trick as the
 // contract rotation), so every player sees the same matchups and odds at once.
-const SPORTS_ROTATION_MINUTES = 30;
+const SPORTS_ROTATION_MINUTES = 8;
 const SPORTS_ROTATION_MS = SPORTS_ROTATION_MINUTES * 60 * 1000;
 const SPORTS_HOUSE_EDGE = 0.9; // payout multiplier scales fair odds down by this factor
 
