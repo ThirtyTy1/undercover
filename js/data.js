@@ -15,6 +15,10 @@ const TIERS = [
   { name: "Ghost Emperor", repReq: 45000 },
   { name: "Living Legend", repReq: 70000 },
   { name: "Immortal", repReq: 100000 },
+  // Rep cap doubled to 200,000 — these keep the promotions coming all the way up.
+  { name: "Apex Predator", repReq: 130000 },
+  { name: "Mythic", repReq: 160000 },
+  { name: "The Untouchable Don", repReq: 200000 },
 ];
 
 function tierForRep(rep) {
@@ -25,8 +29,8 @@ function tierForRep(rep) {
   return idx;
 }
 
-const MAX_REP = 100000;
-const MAX_LEVEL = 1000;
+const MAX_REP = 200000;
+const MAX_LEVEL = 2000;
 const REP_PER_LEVEL = MAX_REP / MAX_LEVEL; // 100 rep per level
 
 function levelForRep(rep) {
@@ -43,7 +47,7 @@ const CITIES = [
   { id: "newyork", name: "New York", desc: "Wall Street fronts and old-money crime families.", requiresJet: true },
   { id: "vegas", name: "Las Vegas", desc: "Casinos, skimming operations, and desert graves.", requiresJet: true },
 ];
-const TRAVEL_COST = 11600; // 8000 + 45%
+const TRAVEL_COST = 15000; // bumped up again from 11600
 
 const MAX_ACTIVE_CONTRACTS = 2; // contracts you can have running at once
 
@@ -197,6 +201,8 @@ const WEAPONS = [
   { id: "w7", name: "Twin Golden Deagles", cost: 108000, bonus: 0.45, repReq: 1000 },
   { id: "w8", name: "Armor-Piercing Rifle", cost: 150000, bonus: 0.55, repReq: 1800 },
   { id: "w9", name: "Prototype Railgun", cost: 300000, bonus: 0.65, repReq: 2500 },
+  { id: "w10", name: "Experimental EMP Rifle", cost: 500000, bonus: 0.72, repReq: 3200 },
+  { id: "w11", name: "One-of-One Ghost Weapon", cost: 800000, bonus: 0.8, repReq: 4500 },
 ];
 
 const FLEX_ITEMS = {
@@ -219,6 +225,11 @@ const FLEX_ITEMS = {
     { id: "car5", name: "Bugatti", cost: 3400000, heatReduction: 0.12, payoutBoost: 0.1 },
     { id: "car9", name: "Hypercar", cost: 3900000, heatReduction: 0.13, payoutBoost: 0.11 },
     { id: "car12", name: "Track Hypercar", cost: 4700000, heatReduction: 0.14, payoutBoost: 0.12 },
+    { id: "car19", name: "Rolls-Royce Phantom", cost: 980000, heatReduction: 0.1, payoutBoost: 0.08 },
+    { id: "car20", name: "Pagani Huayra", cost: 5500000, heatReduction: 0.145, payoutBoost: 0.125 },
+    { id: "car21", name: "Koenigsegg Jesko", cost: 6800000, heatReduction: 0.15, payoutBoost: 0.13 },
+    { id: "car22", name: "Bugatti La Voiture Noire", cost: 8200000, heatReduction: 0.155, payoutBoost: 0.135 },
+    { id: "car23", name: "One-of-One Custom Hypercar", cost: 12000000, heatReduction: 0.17, payoutBoost: 0.15 },
   ],
   jets: [
     { id: "jet3", name: "Cirrus Vision Jet", cost: 6000000, heatReduction: 0.15, payoutBoost: 0.12 },
@@ -241,16 +252,18 @@ const FLEX_ITEMS = {
     { id: "watch5", name: "Iced Richard Mille", cost: 877500, repBoost: 0.15, payoutBoost: 0.08 },
     { id: "watch12", name: "RM Tourbillon", cost: 1235000, repBoost: 0.17, payoutBoost: 0.09 },
     { id: "watch13", name: "RM Skull Edition", cost: 1755000, repBoost: 0.2, payoutBoost: 0.1 },
+    { id: "watch14", name: "Grandmaster Chime", cost: 2200000, repBoost: 0.22, payoutBoost: 0.11 },
+    { id: "watch15", name: "One-of-One Custom Piece", cost: 3000000, repBoost: 0.25, payoutBoost: 0.12 },
   ],
-  necklaces: [
-    { id: "neck1", name: "Silver Chain", cost: 300, heatReduction: 0.01, repBoost: 0 },
-    { id: "neck6", name: "Pearl Necklace", cost: 600, heatReduction: 0.015, repBoost: 0.005 },
-    { id: "neck2", name: "Gold Chain", cost: 2000, heatReduction: 0.02, repBoost: 0 },
-    { id: "neck3", name: "Diamond Pendant", cost: 15000, heatReduction: 0.04, repBoost: 0.02 },
-    { id: "neck7", name: "Diamond Tennis Chain", cost: 25000, heatReduction: 0.05, repBoost: 0.03 },
-    { id: "neck4", name: "Iced Cuban Link", cost: 60000, heatReduction: 0.06, repBoost: 0.04 },
-    { id: "neck8", name: "VVS Diamond Chain", cost: 100000, heatReduction: 0.08, repBoost: 0.05 },
-    { id: "neck5", name: "Custom Diamond Chain", cost: 150000, heatReduction: 0.1, repBoost: 0.06 },
+  shoes: [
+    { id: "shoe1", name: "Classic Sneakers", cost: 250, heatReduction: 0.01, repBoost: 0 },
+    { id: "shoe2", name: "Retro Kicks", cost: 650, heatReduction: 0.015, repBoost: 0.005 },
+    { id: "shoe6", name: "Designer Trainers", cost: 2200, heatReduction: 0.02, repBoost: 0.01 },
+    { id: "shoe3", name: "Limited Edition Drop", cost: 8000, heatReduction: 0.03, repBoost: 0.02 },
+    { id: "shoe7", name: "Rare Collab Pair", cost: 18000, heatReduction: 0.04, repBoost: 0.03 },
+    { id: "shoe4", name: "Custom Diamond Soles", cost: 45000, heatReduction: 0.05, repBoost: 0.04 },
+    { id: "shoe8", name: "Gold-Plated Edition", cost: 90000, heatReduction: 0.07, repBoost: 0.05 },
+    { id: "shoe5", name: "One-of-One Custom Pair", cost: 150000, heatReduction: 0.09, repBoost: 0.06 },
   ],
   clothes: [
     { id: "cloth1", name: "Streetwear Fit", cost: 300, payoutBoost: 0.01, repBoost: 0 },
@@ -265,6 +278,8 @@ const FLEX_ITEMS = {
     { id: "cloth12", name: "Leather Varsity Fit", cost: 40000, payoutBoost: 0.095, repBoost: 0.05 },
     { id: "cloth8", name: "LV Varsity Fit", cost: 45000, payoutBoost: 0.1, repBoost: 0.055 },
     { id: "cloth5", name: "Custom Bespoke Wardrobe", cost: 75000, payoutBoost: 0.12, repBoost: 0.07 },
+    { id: "cloth13", name: "Runway Exclusive Set", cost: 120000, payoutBoost: 0.13, repBoost: 0.08 },
+    { id: "cloth14", name: "One-of-One Couture", cost: 200000, payoutBoost: 0.15, repBoost: 0.09 },
   ],
 };
 
@@ -272,40 +287,44 @@ const SELL_RATE = 0.5; // fraction of original cost refunded when selling
 const WIRE_MIN_COST = 1600000; // cars, jets, and houses at or above this price can be paid via a bank wire instead of cash
 const BILL_CYCLE_SECONDS = 86400; // how often rent/property tax/insurance/salary comes due (24h) — can also be paid early
 const MAX_RENTALS = 2; // apartments you can rent at once, on top of 1 owned house
-const BILL_CAR_INSURANCE_RATE = 0.018; // insurance due per cycle, as a fraction of the car's cost (0.015 + 23%, rounded)
-const BILL_AGENT_SALARY_RATE = 0.0615; // salary due per cycle, as a fraction of the agent's base hire cost (0.05 + 23%) — miss it and they quit
+const BILL_CAR_INSURANCE_RATE = 0.0207; // insurance due per cycle, as a fraction of the car's cost
+const BILL_AGENT_SALARY_RATE = 0.0707; // salary due per cycle, as a fraction of the agent's base hire cost — miss it and they quit
 const PAY_EARLY_WINDOW_HOURS = 10; // bills can only be paid early once this close to their due date
 const PAY_EARLY_WINDOW_MS = PAY_EARLY_WINDOW_HOURS * 60 * 60 * 1000;
 
 const HOUSES = {
   rent: [
-    { id: "rent1", name: "Studio Apartment", rentCost: 1660, heatReduction: 0.02, repReq: 0 },
-    { id: "rent2", name: "1BR Apartment", rentCost: 3075, heatReduction: 0.04, repReq: 0 },
-    { id: "rent3", name: "Downtown Loft", rentCost: 6150, heatReduction: 0.06, repReq: 100 },
-    { id: "rent4", name: "Luxury High-Rise", rentCost: 11070, heatReduction: 0.08, repReq: 400 },
-    { id: "rent5", name: "Sky Loft Penthouse", rentCost: 18450, heatReduction: 0.1, repReq: 1000 },
+    { id: "rent1", name: "Studio Apartment", rentCost: 1909, heatReduction: 0.02, repReq: 0 },
+    { id: "rent2", name: "1BR Apartment", rentCost: 3536, heatReduction: 0.04, repReq: 0 },
+    { id: "rent3", name: "Downtown Loft", rentCost: 7072, heatReduction: 0.06, repReq: 100 },
+    { id: "rent4", name: "Luxury High-Rise", rentCost: 12730, heatReduction: 0.08, repReq: 400 },
+    { id: "rent5", name: "Sky Loft Penthouse", rentCost: 21218, heatReduction: 0.1, repReq: 1000 },
+    { id: "rent6", name: "Rooftop Duplex", rentCost: 34500, heatReduction: 0.12, repReq: 1400 },
   ],
   buy: [
-    { id: "buy1", name: "Suburban House", cost: 500000, taxCost: 676, heatReduction: 0.06, repReq: 0 },
-    { id: "buy5", name: "Luxury Condo", cost: 1350000, taxCost: 1660, heatReduction: 0.08, repReq: 100 },
-    { id: "buy2", name: "Penthouse Condo", cost: 2800000, taxCost: 3444, heatReduction: 0.1, repReq: 400 },
-    { id: "buy6", name: "Beachfront Villa", cost: 6700000, taxCost: 6888, heatReduction: 0.12, repReq: 1000 },
-    { id: "buy13", name: "Cliffside Glass Retreat", cost: 10000000, taxCost: 9225, heatReduction: 0.14, repReq: 1000 },
-    { id: "buy3", name: "Private Estate", cost: 13500000, taxCost: 11070, heatReduction: 0.15, repReq: 1000 },
-    { id: "buy10", name: "Modern Glass Estate", cost: 18000000, taxCost: 13530, heatReduction: 0.165, repReq: 1400 },
-    { id: "buy12", name: "Alpine Ski Estate", cost: 22000000, taxCost: 15990, heatReduction: 0.17, repReq: 1600 },
-    { id: "buy7", name: "Mega Mansion", cost: 28000000, taxCost: 20910, heatReduction: 0.18, repReq: 1800 },
-    { id: "buy11", name: "Hollywood Hills Estate", cost: 32000000, taxCost: 22755, heatReduction: 0.185, repReq: 1800 },
-    { id: "buy9", name: "Royal Estate", cost: 39000000, taxCost: 24600, heatReduction: 0.19, repReq: 1800 },
-    { id: "buy4", name: "Private Island Compound", cost: 50000000, taxCost: 27060, heatReduction: 0.2, repReq: 1000 },
-    { id: "buy8", name: "Sky Penthouse", cost: 90000000, taxCost: 41820, heatReduction: 0.22, repReq: 2500 },
+    { id: "buy1", name: "Suburban House", cost: 500000, taxCost: 777, heatReduction: 0.06, repReq: 0 },
+    { id: "buy5", name: "Luxury Condo", cost: 1350000, taxCost: 1909, heatReduction: 0.08, repReq: 100 },
+    { id: "buy2", name: "Penthouse Condo", cost: 2800000, taxCost: 3961, heatReduction: 0.1, repReq: 400 },
+    { id: "buy6", name: "Beachfront Villa", cost: 6700000, taxCost: 7921, heatReduction: 0.12, repReq: 1000 },
+    { id: "buy13", name: "Cliffside Glass Retreat", cost: 10000000, taxCost: 10609, heatReduction: 0.14, repReq: 1000 },
+    { id: "buy3", name: "Private Estate", cost: 13500000, taxCost: 12730, heatReduction: 0.15, repReq: 1000 },
+    { id: "buy10", name: "Modern Glass Estate", cost: 18000000, taxCost: 15559, heatReduction: 0.165, repReq: 1400 },
+    { id: "buy12", name: "Alpine Ski Estate", cost: 22000000, taxCost: 18388, heatReduction: 0.17, repReq: 1600 },
+    { id: "buy7", name: "Mega Mansion", cost: 28000000, taxCost: 24046, heatReduction: 0.18, repReq: 1800 },
+    { id: "buy11", name: "Hollywood Hills Estate", cost: 32000000, taxCost: 26168, heatReduction: 0.185, repReq: 1800 },
+    { id: "buy9", name: "Royal Estate", cost: 39000000, taxCost: 28290, heatReduction: 0.19, repReq: 1800 },
+    { id: "buy4", name: "Private Island Compound", cost: 50000000, taxCost: 31119, heatReduction: 0.2, repReq: 1000 },
+    { id: "buy8", name: "Sky Penthouse", cost: 90000000, taxCost: 48093, heatReduction: 0.22, repReq: 2500 },
+    { id: "buy14", name: "Mountain Fortress Estate", cost: 120000000, taxCost: 63250, heatReduction: 0.24, repReq: 2800 },
+    { id: "buy15", name: "Private Archipelago", cost: 180000000, taxCost: 78200, heatReduction: 0.26, repReq: 3200 },
+    { id: "buy16", name: "The Crown Estate", cost: 250000000, taxCost: 97750, heatReduction: 0.28, repReq: 4000 },
   ],
 };
 
 const LAYLOW_ACTIONS = [
-  { id: "ll1", name: "Quick Lay Low", desc: "Lie low for a bit, let things cool off.", cost: 725, heatRemoved: 10 },
-  { id: "ll2", name: "Safehouse", desc: "Hole up somewhere off the grid.", cost: 5075, heatRemoved: 30 },
-  { id: "ll3", name: "Full Blackout", desc: "Disappear completely for a while.", cost: 26100, heatRemoved: 70 },
+  { id: "ll1", name: "Quick Lay Low", desc: "Lie low for a bit, let things cool off.", cost: 1015, heatRemoved: 10 },
+  { id: "ll2", name: "Safehouse", desc: "Hole up somewhere off the grid.", cost: 7105, heatRemoved: 30 },
+  { id: "ll3", name: "Full Blackout", desc: "Disappear completely for a while.", cost: 36540, heatRemoved: 70 },
 ];
 
 // Agents work contracts on your behalf while you stay out of sight.
@@ -346,6 +365,8 @@ const ARMS_CATALOG = [
   { id: "shotgun", name: "Shotgun", buyPrice: 700, sellPrice: 1150, heat: 2 },
   { id: "rifle", name: "Assault Rifle", buyPrice: 2200, sellPrice: 3600, heat: 3 },
   { id: "sniper", name: "Heavy SMG", buyPrice: 5000, sellPrice: 8200, heat: 4 },
+  { id: "carbine", name: "Carbine", buyPrice: 3500, sellPrice: 5700, heat: 3 },
+  { id: "lmg", name: "Light Machine Gun", buyPrice: 8000, sellPrice: 13000, heat: 5 },
 ];
 
 const BANK_INTEREST_CYCLE_SECONDS = 90;
@@ -376,6 +397,13 @@ const ROULETTE_OUTSIDE_BETS = [
   { type: "dozen3", label: "3rd 12", mult: 3 },
 ];
 const ROULETTE_STRAIGHT_MULT = 36;
+
+// Casino: Dice — roll two dice, bet on Under 7, Exactly 7, or Over 7.
+const DICE_BETS = [
+  { type: "under", label: "Under 7", mult: 2 },
+  { type: "seven", label: "Exactly 7", mult: 5 },
+  { type: "over", label: "Over 7", mult: 2 },
+];
 
 // Casino: Sportsbook — NBA moneyline and UFC fight betting. The board rotates every
 // few real minutes, deterministically seeded from the time slot (same trick as the
@@ -559,6 +587,30 @@ const BUSINESSES = [
     perkLabel: "+5% contract success odds",
     repReq: 1800,
   },
+  {
+    id: "pawnshop",
+    name: "Pawn Shop",
+    desc: "Buys stolen goods no questions asked — guns move fast out the back.",
+    cost: 4500000,
+    income: 26000,
+    heatReduction: 0.075,
+    perk: "gunSellBoost",
+    perkAmount: 0.12,
+    perkLabel: "+12% on gun sale offers",
+    repReq: 2200,
+  },
+  {
+    id: "fixernetwork",
+    name: "Fixer Network",
+    desc: "Connections that make problems — and heat — disappear for less.",
+    cost: 6000000,
+    income: 32000,
+    heatReduction: 0.08,
+    perk: "layLowDiscount",
+    perkAmount: 0.15,
+    perkLabel: "-15% lay low costs",
+    repReq: 2800,
+  },
 ];
 
 // Drug dealing: buy stock from the Plug, sell to buyers who text in.
@@ -577,8 +629,8 @@ const DRUG_REQUEST_QTY_RANGE = {
 };
 
 const DRUG_REQUEST_EXPIRE_SECONDS = 180;
-const DRUG_REQUEST_MIN_GAP_SECONDS = 21;
-const DRUG_REQUEST_MAX_GAP_SECONDS = 42;
+const DRUG_REQUEST_MIN_GAP_SECONDS = 35; // slowed down from 21s
+const DRUG_REQUEST_MAX_GAP_SECONDS = 70; // slowed down from 42s
 const DRUG_REQUEST_BASE_PENDING = 3;
 const DRUG_REQUEST_MAX_PENDING_CAP = 8;
 
@@ -594,16 +646,26 @@ const GUN_ORDER_QTY_RANGE = {
   shotgun: [1, 2],
   rifle: [1, 1],
   sniper: [1, 2],
+  carbine: [1, 2],
+  lmg: [1, 1],
 };
 const GUN_ORDER_EXPIRE_SECONDS = 180;
-const GUN_ORDER_MIN_GAP_SECONDS = 52;
-const GUN_ORDER_MAX_GAP_SECONDS = 105;
+const GUN_ORDER_MIN_GAP_SECONDS = 80; // slowed down from 52s
+const GUN_ORDER_MAX_GAP_SECONDS = 160; // slowed down from 105s
 const GUN_ORDER_BASE_PENDING = 3;
 const GUN_ORDER_MAX_PENDING_CAP = 8;
 const GUN_COUNTER_OPTIONS = [
   { pct: 0.2, chance: 0.65, label: "Counter +20%" },
   { pct: 0.4, chance: 0.35, label: "Push +40%" },
 ];
+
+// Big Orders: rare, oversized requests from cartel connections that show up randomly
+// across drugs/guns/watches — much bigger quantity and a better price than a normal
+// buyer, but a longer window since the volume can be harder to stock up for.
+const BIG_ORDER_CHANCE = 0.12; // chance any given request/order rolls as a Big Order
+const BIG_ORDER_QTY_MULT = [4, 8]; // multiplies the normal qty roll by a random factor in this range
+const BIG_ORDER_PRICE_FACTOR = [0.95, 1.2]; // cartel buyers pay closer to (or above) sticker price
+const BIG_ORDER_EXPIRE_SECONDS = 420;
 
 // Watch dealing: buy stock from a supplier, sell to buyers who text in — same loop as drugs/guns.
 const WATCH_SUPPLIER_CATALOG = [
@@ -613,6 +675,8 @@ const WATCH_SUPPLIER_CATALOG = [
   { id: "watchgold", name: "Gold Diver", buyPrice: 900, sellPrice: 2400, heat: 2 },
   { id: "watchdiamond", name: "Diamond Bezel", buyPrice: 2500, sellPrice: 6600, heat: 2 },
   { id: "watchiced", name: "Iced-Out Piece", buyPrice: 6000, sellPrice: 15750, heat: 3 },
+  { id: "watchtourb", name: "Tourbillon Piece", buyPrice: 12000, sellPrice: 31000, heat: 3 },
+  { id: "watchcustom", name: "One-of-One Custom Watch", buyPrice: 25000, sellPrice: 65000, heat: 4 },
 ];
 const WATCH_ORDER_QTY_RANGE = {
   watchcheap: [1, 4],
@@ -620,12 +684,14 @@ const WATCH_ORDER_QTY_RANGE = {
   watchgold: [1, 2],
   watchdiamond: [1, 2],
   watchiced: [1, 1],
+  watchtourb: [1, 1],
+  watchcustom: [1, 1],
 };
 const WATCH_ORDER_EXPIRE_SECONDS = 180;
-const WATCH_ORDER_MIN_GAP_SECONDS = 48;
-const WATCH_ORDER_MAX_GAP_SECONDS = 98;
-const WATCH_ORDER_BASE_PENDING = 3;
-const WATCH_ORDER_MAX_PENDING_CAP = 8;
+const WATCH_ORDER_MIN_GAP_SECONDS = 25; // more frequent, down from 48s
+const WATCH_ORDER_MAX_GAP_SECONDS = 55; // more frequent, down from 98s
+const WATCH_ORDER_BASE_PENDING = 4;
+const WATCH_ORDER_MAX_PENDING_CAP = 10;
 const WATCH_COUNTER_OPTIONS = [
   { pct: 0.2, chance: 0.65, label: "Counter +20%" },
   { pct: 0.4, chance: 0.35, label: "Push +40%" },

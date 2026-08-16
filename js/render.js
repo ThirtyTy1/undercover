@@ -276,7 +276,7 @@ const FLEX_CATEGORIES = [
   { key: "cars", label: "Cars", items: () => FLEX_ITEMS.cars },
   { key: "jets", label: "Jets", items: () => FLEX_ITEMS.jets },
   { key: "watches", label: "Watches", items: () => FLEX_ITEMS.watches },
-  { key: "necklaces", label: "Necklaces", items: () => FLEX_ITEMS.necklaces },
+  { key: "shoes", label: "Shoes", items: () => FLEX_ITEMS.shoes },
   { key: "clothes", label: "Clothes", items: () => FLEX_ITEMS.clothes },
 ];
 
@@ -338,15 +338,47 @@ function casinoTabHTML() {
       <button class="btn ${casinoView === "slots" ? "equipped" : ""}" data-action="casino-view" data-view="slots">Slots</button>
       <button class="btn ${casinoView === "roulette" ? "equipped" : ""}" data-action="casino-view" data-view="roulette">Roulette</button>
       <button class="btn ${casinoView === "highlow" ? "equipped" : ""}" data-action="casino-view" data-view="highlow">High-Low</button>
+      <button class="btn ${casinoView === "dice" ? "equipped" : ""}" data-action="casino-view" data-view="dice">Dice</button>
       <button class="btn ${casinoView === "sportsbook" ? "equipped" : ""}" data-action="casino-view" data-view="sportsbook">Sportsbook</button>
     </div>`;
   const body =
     casinoView === "blackjack" ? blackjackHTML()
     : casinoView === "slots" ? slotsHTML()
     : casinoView === "highlow" ? highlowHTML()
+    : casinoView === "dice" ? diceHTML()
     : casinoView === "sportsbook" ? sportsbookHTML()
     : rouletteHTML();
   return nav + body;
+}
+
+function diceHTML() {
+  const rolling = diceGame && diceGame.phase === "rolling";
+  const resultCls = diceGame && diceGame.resultText ? (diceGame.resultText.includes("WIN") ? "great" : "fail") : "";
+  const diceFace = (n) => (n ? "⚀⚁⚂⚃⚄⚅"[n - 1] : "🎲");
+
+  const dice = diceGame
+    ? `<div class="dice-pair"><span class="die-face">${diceFace(diceGame.die1)}</span><span class="die-face">${diceFace(diceGame.die2)}</span></div>`
+    : `<div class="dice-pair"><span class="die-face">🎲</span><span class="die-face">🎲</span></div>`;
+
+  const betButtons = DICE_BETS.map((b) => {
+    const selected = diceSelection === b.type;
+    return `<button class="btn ${selected ? "equipped" : ""}" data-action="dice-select" data-type="${b.type}" ${rolling ? "disabled" : ""}>${b.label} (${b.mult}x)</button>`;
+  }).join("");
+
+  return `
+    <div class="casino-table">
+      ${dice}
+      ${diceGame && diceGame.resultText ? `<div class="mg-result-text ${resultCls}">${diceGame.resultText}</div>` : ""}
+      <div class="crypto-action-group">${betButtons}</div>
+      <div class="crypto-action-group">
+        <button class="btn" data-action="dice-roll" data-amount="100" ${!diceSelection || rolling || state.cash < 100 ? "disabled" : ""}>Roll ${fmt(100)}</button>
+        <button class="btn" data-action="dice-roll" data-amount="500" ${!diceSelection || rolling || state.cash < 500 ? "disabled" : ""}>Roll ${fmt(500)}</button>
+        <button class="btn" data-action="dice-roll" data-amount="2000" ${!diceSelection || rolling || state.cash < 2000 ? "disabled" : ""}>Roll ${fmt(2000)}</button>
+        <button class="btn" data-action="dice-roll" data-amount="10000" ${!diceSelection || rolling || state.cash < 10000 ? "disabled" : ""}>Roll ${fmt(10000)}</button>
+      </div>
+      ${diceGame && !rolling ? `<button class="btn sell" data-action="dice-new">New Round</button>` : ""}
+      <div class="hint">Two dice, three ways to bet: Under 7, Exactly 7, or Over 7.</div>
+    </div>`;
 }
 
 function sportsbookHTML() {
@@ -795,7 +827,7 @@ function profileTabHTML() {
     })
     .join("");
 
-  const FLEX_CAT_LABELS = { cars: "Cars", jets: "Jets", watches: "Watches", necklaces: "Necklaces", clothes: "Clothes" };
+  const FLEX_CAT_LABELS = { cars: "Cars", jets: "Jets", watches: "Watches", shoes: "Shoes", clothes: "Clothes" };
   const ownedFlexByCategoryHTML = Object.entries(FLEX_ITEMS)
     .map(([key, items]) => {
       const ownedInCat = items.filter((i) => state.ownedFlex.includes(i.id));
@@ -900,7 +932,7 @@ function laylowTabHTML() {
         <div class="card-title">${a.name}</div>
         <div class="card-row">${a.desc}</div>
         <div class="card-row">-${a.heatRemoved} heat</div>
-        <button class="btn" data-action="lay-low" data-id="${a.id}" ${state.cash < a.cost ? "disabled" : ""}>Pay ${fmt(a.cost)}</button>
+        <button class="btn" data-action="lay-low" data-id="${a.id}" ${state.cash < layLowCost(a) ? "disabled" : ""}>Pay ${fmt(layLowCost(a))}</button>
       </div>`
   ).join("");
 
@@ -1160,6 +1192,9 @@ function bindTabEvents() {
       else if (action === "highlow-guess") highlowGuess(btn.dataset.dir);
       else if (action === "highlow-cashout") highlowCashOut();
       else if (action === "highlow-new") highlowNewRound();
+      else if (action === "dice-select") selectDiceBet(btn.dataset.type);
+      else if (action === "dice-roll") rollDice(Number(btn.dataset.amount));
+      else if (action === "dice-new") newDiceRound();
       else if (action === "sports-select") selectSportsBet(id, btn.dataset.side);
       else if (action === "sports-clear") clearSportsBet();
       else if (action === "sports-bet") placeSportsBet(Number(btn.dataset.amount));
@@ -1478,7 +1513,8 @@ function renderGunOrdersView() {
           `<button class="btn launder" data-action="counter-gun-order" data-id="${order.id}" data-pct="${opt.pct}" data-chance="${opt.chance}" ${haveEnough ? "" : "disabled"}>${opt.label} (${Math.round(opt.chance * 100)}%)</button>`
       ).join("");
       return `
-        <div class="plug-row">
+        <div class="plug-row ${order.big ? "big-order" : ""}">
+          ${order.big ? `<div class="big-order-badge">🔥 CARTEL ORDER</div>` : ""}
           <div class="art-box">${itemArtSVG(g.id, 56)}</div>
           <div class="plug-row-title">Wants ${order.qty} ${g.name}${order.qty > 1 ? "s" : ""}</div>
           <div class="card-row">Offering ${fmt(order.offerPrice)} · expires in ${remain}s</div>
@@ -1515,7 +1551,8 @@ function renderDrugRequestsView() {
           `<button class="btn launder" data-action="counter-drug-request" data-id="${req.id}" data-pct="${opt.pct}" data-chance="${opt.chance}" ${haveEnough ? "" : "disabled"}>${opt.label} (${Math.round(opt.chance * 100)}%)</button>`
       ).join("");
       return `
-        <div class="plug-row">
+        <div class="plug-row ${req.big ? "big-order" : ""}">
+          ${req.big ? `<div class="big-order-badge">🔥 CARTEL ORDER</div>` : ""}
           <div class="plug-row-title">Wants ${req.qty} ${d.unit}${req.qty > 1 ? "s" : ""} of ${d.name}</div>
           <div class="card-row">Offering ${fmt(req.offerPrice)} · expires in ${remain}s</div>
           ${!haveEnough ? `<div class="locked-tag">Not enough ${d.name} in stock</div>` : ""}
@@ -1573,7 +1610,8 @@ function renderWatchOrdersView() {
           `<button class="btn launder" data-action="counter-watch-order" data-id="${order.id}" data-pct="${opt.pct}" data-chance="${opt.chance}" ${haveEnough ? "" : "disabled"}>${opt.label} (${Math.round(opt.chance * 100)}%)</button>`
       ).join("");
       return `
-        <div class="plug-row">
+        <div class="plug-row ${order.big ? "big-order" : ""}">
+          ${order.big ? `<div class="big-order-badge">🔥 CARTEL ORDER</div>` : ""}
           <div class="art-box">${itemArtSVG(w.id, 56)}</div>
           <div class="plug-row-title">Wants ${order.qty} ${w.name}${order.qty > 1 ? "s" : ""}</div>
           <div class="card-row">Offering ${fmt(order.offerPrice)} · expires in ${remain}s</div>

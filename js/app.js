@@ -78,6 +78,18 @@ function load() {
       state.businesses = state.businesses.filter((id) => BUSINESSES.some((b) => b.id === id));
       delete state.wallet;
       delete state.rivalsDefeated;
+      // Necklaces were removed in favor of Shoes — refund anyone still holding one.
+      const NECKLACE_REFUNDS = {
+        neck1: 300, neck6: 600, neck2: 2000, neck3: 15000,
+        neck7: 25000, neck4: 60000, neck8: 100000, neck5: 150000,
+      };
+      const ownedNecklaces = state.ownedFlex.filter((id) => id in NECKLACE_REFUNDS);
+      if (ownedNecklaces.length > 0) {
+        const refund = ownedNecklaces.reduce((sum, id) => sum + NECKLACE_REFUNDS[id], 0);
+        state.cash += refund;
+        state.ownedFlex = state.ownedFlex.filter((id) => !(id in NECKLACE_REFUNDS));
+        addLog(`Necklaces discontinued — refunded ${fmt(refund)}`, "info");
+      }
       // Existing owned businesses from before condition/upkeep existed start at full condition.
       for (const id of state.businesses) {
         if (typeof state.businessCondition[id] !== "number") state.businessCondition[id] = 100;
@@ -635,11 +647,16 @@ function processBankInterest() {
 
 // ---------- Lay low ----------
 
+function layLowCost(a) {
+  return Math.round(a.cost * (1 - businessPerk("layLowDiscount")));
+}
+
 function doLayLow(id) {
   const a = LAYLOW_ACTIONS.find((a) => a.id === id);
   if (!a) return;
-  if (state.cash < a.cost) return;
-  state.cash -= a.cost;
+  const cost = layLowCost(a);
+  if (state.cash < cost) return;
+  state.cash -= cost;
   state.heat = Math.max(0, state.heat - a.heatRemoved);
   addLog(`${a.name}: -${a.heatRemoved} heat`, "laylow");
   save();
@@ -1227,6 +1244,65 @@ function resolveRoulette(resultNumber, amount, betType, betNumber) {
   render();
 }
 
+// ---------- Dice ----------
+
+let diceGame = null; // { betType, bet, phase: 'rolling'|'done', die1, die2, resultText }
+let diceSelection = null; // bet type string
+
+function selectDiceBet(type) {
+  if (diceGame && diceGame.phase === "rolling") return;
+  diceSelection = type;
+  render();
+}
+
+function rollDice(amount) {
+  if (!diceSelection) return;
+  amount = Math.floor(Math.min(amount, state.cash));
+  if (amount <= 0 || (diceGame && diceGame.phase === "rolling")) return;
+  state.cash -= amount;
+
+  const betType = diceSelection;
+  const d1 = 1 + Math.floor(Math.random() * 6);
+  const d2 = 1 + Math.floor(Math.random() * 6);
+
+  diceGame = { betType, bet: amount, phase: "rolling", die1: null, die2: null, resultText: null };
+  save();
+  render();
+
+  setTimeout(() => resolveDice(d1, d2, amount, betType), 900);
+}
+
+function resolveDice(d1, d2, amount, betType) {
+  const total = d1 + d2;
+  const bet = DICE_BETS.find((b) => b.type === betType);
+  const mult = bet ? bet.mult : 0;
+  let win = false;
+  if (betType === "under") win = total < 7;
+  else if (betType === "over") win = total > 7;
+  else if (betType === "seven") win = total === 7;
+
+  const payout = win ? amount * mult : 0;
+  state.cash += payout;
+
+  diceGame.phase = "done";
+  diceGame.die1 = d1;
+  diceGame.die2 = d2;
+  diceGame.resultText = win
+    ? `${d1} + ${d2} = ${total} — WIN +${fmt(payout - amount)}`
+    : `${d1} + ${d2} = ${total} — No win, -${fmt(amount)}`;
+
+  addLog(`Dice: ${diceGame.resultText}`, win ? "success" : "fail");
+  save();
+  render();
+}
+
+function newDiceRound() {
+  if (diceGame && diceGame.phase === "rolling") return;
+  diceGame = null;
+  diceSelection = null;
+  render();
+}
+
 // ---------- Sportsbook ----------
 
 let sportsGame = null; // { matchupId, side, bet, phase: 'live'|'done', resultText }
@@ -1369,21 +1445,42 @@ function maxDrugPending() {
   return Math.min(DRUG_REQUEST_MAX_PENDING_CAP, DRUG_REQUEST_BASE_PENDING + currentTierIndex());
 }
 
+// A Big Order rolls independently on every generated request/order — same rare-event
+// trick used everywhere else, just a coin flip instead of a time-seeded rotation.
+function rollBigOrder() {
+  const isBig = Math.random() < BIG_ORDER_CHANCE;
+  if (!isBig) return { isBig: false, qtyMult: 1, priceFactor: 0.7 + Math.random() * 0.25, expireSeconds: null };
+  const [qLo, qHi] = BIG_ORDER_QTY_MULT;
+  const [pLo, pHi] = BIG_ORDER_PRICE_FACTOR;
+  return {
+    isBig: true,
+    qtyMult: qLo + Math.random() * (qHi - qLo),
+    priceFactor: pLo + Math.random() * (pHi - pLo),
+    expireSeconds: BIG_ORDER_EXPIRE_SECONDS,
+  };
+}
+
 function generateDrugRequest() {
   if (state.drugRequests.length >= maxDrugPending()) return;
   const d = DRUGS[Math.floor(Math.random() * DRUGS.length)];
   const [lo, hi] = DRUG_REQUEST_QTY_RANGE[d.id];
-  const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
-  const priceFactor = 0.7 + Math.random() * 0.25; // customers lowball a bit
-  const offerPrice = Math.round(d.baseSellPrice * qty * priceFactor * (1 + businessPerk("drugSellBoost")));
+  const roll = rollBigOrder();
+  const qty = Math.round((lo + Math.floor(Math.random() * (hi - lo + 1))) * roll.qtyMult);
+  const offerPrice = Math.round(d.baseSellPrice * qty * roll.priceFactor * (1 + businessPerk("drugSellBoost")));
   state.drugRequests.push({
     id: "req" + Date.now() + Math.floor(Math.random() * 1000),
     drugId: d.id,
     qty,
     offerPrice,
-    expiresAt: Date.now() + DRUG_REQUEST_EXPIRE_SECONDS * 1000,
+    expiresAt: Date.now() + (roll.expireSeconds || DRUG_REQUEST_EXPIRE_SECONDS) * 1000,
+    big: roll.isBig,
   });
-  addLog(`New buyer wants ${qty} ${d.unit}${qty > 1 ? "s" : ""} of ${d.name}`, "info");
+  addLog(
+    roll.isBig
+      ? `🔥 BIG ORDER: a cartel buyer wants ${qty} ${d.unit}${qty > 1 ? "s" : ""} of ${d.name}`
+      : `New buyer wants ${qty} ${d.unit}${qty > 1 ? "s" : ""} of ${d.name}`,
+    roll.isBig ? "success" : "info"
+  );
 }
 
 function processDrugRequests() {
@@ -1475,17 +1572,23 @@ function generateGunOrder() {
   if (state.gunOrders.length >= maxGunPending()) return;
   const g = ARMS_CATALOG[Math.floor(Math.random() * ARMS_CATALOG.length)];
   const [lo, hi] = GUN_ORDER_QTY_RANGE[g.id];
-  const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
-  const priceFactor = 0.7 + Math.random() * 0.25;
-  const offerPrice = Math.round(g.sellPrice * qty * priceFactor);
+  const roll = rollBigOrder();
+  const qty = Math.round((lo + Math.floor(Math.random() * (hi - lo + 1))) * roll.qtyMult);
+  const offerPrice = Math.round(g.sellPrice * qty * roll.priceFactor * (1 + businessPerk("gunSellBoost")));
   state.gunOrders.push({
     id: "gorder" + Date.now() + Math.floor(Math.random() * 1000),
     gunId: g.id,
     qty,
     offerPrice,
-    expiresAt: Date.now() + GUN_ORDER_EXPIRE_SECONDS * 1000,
+    expiresAt: Date.now() + (roll.expireSeconds || GUN_ORDER_EXPIRE_SECONDS) * 1000,
+    big: roll.isBig,
   });
-  addLog(`New order: buyer wants ${qty} ${g.name}${qty > 1 ? "s" : ""}`, "info");
+  addLog(
+    roll.isBig
+      ? `🔥 BIG ORDER: a cartel buyer wants ${qty} ${g.name}${qty > 1 ? "s" : ""}`
+      : `New order: buyer wants ${qty} ${g.name}${qty > 1 ? "s" : ""}`,
+    roll.isBig ? "success" : "info"
+  );
 }
 
 function processGunOrders() {
@@ -1577,17 +1680,23 @@ function generateWatchOrder() {
   if (state.watchOrders.length >= maxWatchPending()) return;
   const w = WATCH_SUPPLIER_CATALOG[Math.floor(Math.random() * WATCH_SUPPLIER_CATALOG.length)];
   const [lo, hi] = WATCH_ORDER_QTY_RANGE[w.id];
-  const qty = lo + Math.floor(Math.random() * (hi - lo + 1));
-  const priceFactor = 0.7 + Math.random() * 0.25;
-  const offerPrice = Math.round(w.sellPrice * qty * priceFactor * (1 + businessPerk("watchSellBoost")));
+  const roll = rollBigOrder();
+  const qty = Math.round((lo + Math.floor(Math.random() * (hi - lo + 1))) * roll.qtyMult);
+  const offerPrice = Math.round(w.sellPrice * qty * roll.priceFactor * (1 + businessPerk("watchSellBoost")));
   state.watchOrders.push({
     id: "worder" + Date.now() + Math.floor(Math.random() * 1000),
     watchId: w.id,
     qty,
     offerPrice,
-    expiresAt: Date.now() + WATCH_ORDER_EXPIRE_SECONDS * 1000,
+    expiresAt: Date.now() + (roll.expireSeconds || WATCH_ORDER_EXPIRE_SECONDS) * 1000,
+    big: roll.isBig,
   });
-  addLog(`New order: buyer wants ${qty} ${w.name}${qty > 1 ? "s" : ""}`, "info");
+  addLog(
+    roll.isBig
+      ? `🔥 BIG ORDER: a cartel buyer wants ${qty} ${w.name}${qty > 1 ? "s" : ""}`
+      : `New order: buyer wants ${qty} ${w.name}${qty > 1 ? "s" : ""}`,
+    roll.isBig ? "success" : "info"
+  );
 }
 
 function processWatchOrders() {
